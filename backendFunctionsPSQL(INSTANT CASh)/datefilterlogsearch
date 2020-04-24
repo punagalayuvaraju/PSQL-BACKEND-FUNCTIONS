@@ -1,0 +1,18 @@
+CREATE OR REPLACE FUNCTION icashobj.datefilterlogsearch(
+	fromdate date,
+	todate date)
+    RETURNS SETOF icashobj.bnkuplh 
+    LANGUAGE 'plpgsql'
+
+  
+AS $BODY$
+DECLARE 
+_sql TEXT := 'select * from icashobj.bnkuplh where buhctd >= $1 AND buhctd <= $2';
+
+BEGIN
+    RETURN QUERY
+   EXECUTE _sql
+   USING fromdate,todate;   
+   RAISE NOTICE 'sql: %', _sql;
+   END
+$BODY$;

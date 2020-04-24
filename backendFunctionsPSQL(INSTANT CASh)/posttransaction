@@ -1,0 +1,125 @@
+CREATE OR REPLACE FUNCTION icashobj.posttransaction(
+	descountry numeric,
+	currency character varying,
+	agentdetails character varying,
+	agentcode numeric,
+	gcmcfname character varying,
+	gcmcmname character varying,
+	gcmclname character varying,
+	address1 character varying,
+	address2 character varying,
+	city_name character varying,
+	rem_fname_nationality character varying,
+	gcmcumob1 character varying,
+	gcmcutel1 character varying,
+	gcmcustat character varying,
+	gcmgender character varying,
+	gcmidtype character varying,
+	gcmidnumb character varying,
+	gcmidexpd date,
+	gcmcusdob date,
+	gcmconame character varying,
+	occupation character varying,
+	srcfound character varying,
+	purpose character varying,
+	relationship character varying,
+	sendingamt numeric,
+	charge numeric,
+	receivingamount numeric,
+	printsettleamount numeric,
+	customerrates numeric,
+	printsettlerate character varying,
+	totalamount numeric,
+	trasactionrates numeric,
+	vat numeric,
+	beneffname character varying,
+	benefmname character varying,
+	beneflname character varying,
+	benefaddress1 character varying,
+	benefaddress2 character varying,
+	benefmobile character varying,
+	beneftele character varying,
+	bennationality numeric,
+	benefcity character varying,
+	benefidnumber character varying,
+	benefidtype character varying,
+	gcnumber character varying,
+	delmode character varying,
+	bnkbkn character varying,
+	bankaccno character varying,
+	bnkadr character varying,
+	bnkstt character varying,
+	password character varying,
+	destinationcurrency character varying,
+	sedinguserid character varying,
+	sendingcurrency character varying,
+	subfranchcode numeric,
+	sendcountrycode numeric,
+	valuedate date)
+    RETURNS SETOF icashobj.icttrml 
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+    ROWS 1000
+AS $BODY$
+DECLARE
+ictcnumber            numeric;
+ificcardnumber        character varying;
+lastictcnumber        numeric;
+countnu               numeric;
+remname               character varying;
+bfname                character varying;
+benuniqueid           character varying;
+ uniquecode           character varying;
+BEGIN
+remname:=concat_ws(',',gcmcfname,gcmcmname,gcmclname);
+bfname:=  concat_ws(',', beneffname,benefmname,beneflname);
+
+select gcrino into ificcardnumber   from icashobj.ictgcrl where  gcridn =benefidnumber and gcrbidt=benefidtype ;
+select iclastno into lastictcnumber from icashobj.ictcla;
+countnu:=1;
+ictcnumber=lastictcnumber+countnu;
+ if(ificcardnumber <> '') then
+         return query 
+		 insert into icashobj.icttrml(trmicn,trmrcc,trmscr,trmrag,trmsnm,trmsd1,trmsd2,trmstl,trmmno,trmamt,trmcrg,trmtam,trmram,trmrnm,trmsmd,trmsdt,trmstm,trmicd,
+												   trmrtl,trmscc,trmsag,trmrcr,trmlnm,trmpst,trmbnm,trmbka,trmba1,trmba2,trmgcd,trmrdt,trmicr,trmidn,trmms1,trmrd1,trmrd2) 
+		                                    values(ictcnumber,desCountry,currency,agentCode,remname,address1,address2,gcmcutel1,gcmcumob1,sendingAmt,charge,totalamount,receivingamount,bfname,delMode,current_date,now(),ificcardnumber,benefTele,sendcountrycode,subfranchcode,destinationCurrency,
+												   sedingUserId,'N',bnkbkn,bankAccNo,bnkadr,bnkstt,gcnumber,valuedate,customerrates,gcmidnumb,purpose,benefaddress1,benefaddress2) returning *;
+		insert into icashobj.ictext(exticn,extsct,extspr,extrct,exten1,exten2,exten3,extsed,extec1,extsbd,extef2,extec2,extsen,extef3,extsof)
+		                    values(ictcnumber,city_name,occupation,benefcity,0,cast(printsettlerate as numeric),printsettleamount,gcmidexpd,rem_fname_nationality,gcmcusdob,
+								   gcmgender,gcmidtype,gcmconame,gcmcustat,srcfound);    
+				--For Reports				   
+		insert into icashobj.ictevtlog(elticn,eltagc,eltsts,eltrmk,eltusr)
+		                     values(ictcnumber,subfranchcode,'N','Transaction Initiated',sedinguserid);
+		 update icashobj.ictcla set iclastno=ictcnumber  where iclastno=lastictcnumber;
+	            else
+                SELECT COUNT(*)+1 INTO uniquecode FROM icashobj.ictgcrl;
+				SELECT lpad(uniquecode::text,8,'0') INTO benuniqueid;	
+				insert into icashobj.ictgcrl(gcrrtp,gcrino,gcrcac,gcrsnm,gcrsd1,gcrsd2,gcrstl,gcrrnm,gcrrd1,gcrrd2,gcrrtl,gcridn,gcrcui,gcridt,gcrdtl,gcrnsl,gcrmno,gcrrmo,
+											 gcrsdb,gcrsfn,gcrsmn,gcrsln,gcrrfn,gcrrmn,gcrrln,gcrspr,gcrbidt,gcrvisaex,gcrcmpname,gcrelben,gcrbrc,gcrbnm,gcrbac,gcrba1,gcrba2,gcrsd3,gcrrd3,gcrrestyp)
+                                     values ('N',benuniqueid,agentCode,remname,address1,address2,gcmcutel1,bfname,benefaddress1,benefaddress2,beneftele,benefidnumber,sedinguserid,
+                                              gcmidtype,gcmidnumb,cast(bennationality as numeric),gcmcumob1,benefmobile,gcmcusdob,gcmcfname,gcmcmname,gcmclname,beneffname,benefmname,
+											  beneflname,occupation,benefidType,gcmidexpd,gcmconame,relationship,gcmgender,bnkbkn,bankaccno,bnkadr,bnkstt,city_name,benefcity,gcmcustat);
+				
+         insert into icashobj.ictbenfl(benfrtp,benfrfn,benfrmn,benfrln,benfrd1,benfrd2,benfnsl,benfrtl,benfrmo,benrlt,benfpmd,benfdtl,benfbnm,benfbac,benfba1,benfba2,benfbno,
+									   benfidt)
+		                       values('N',beneffname,benefmname,beneflname,benefaddress1,benefaddress2,bennationality,benefTele,benefmobile,relationship,delMode,benefidNumber,
+									  bnkbkn,bankAccNo,bnkadr,bnkstt,benuniqueid,benefidType) ; 
+		return query insert into icashobj.icttrml(trmicn,trmrcc,trmscr,trmrag,trmsnm,trmsd1,trmsd2,trmstl,trmmno,trmamt,trmcrg,trmtam,trmram,trmrnm,trmsmd,trmsdt,trmstm,trmicd,
+												  trmrtl,trmscc,trmsag,trmrcr,trmlnm,trmpst,trmbnm,trmbka,trmba1,trmba2,trmgcd,trmrdt,trmicr,trmidn,trmms1,trmrd1,trmrd2) 
+		 values(ictcnumber,desCountry,currency,agentCode,remname,address1,address2,gcmcutel1,gcmcumob1,sendingAmt,charge,totalamount,receivingamount,bfname,delMode,current_date,now(),benuniqueid,benefTele,sendcountrycode,subfranchcode,destinationCurrency,sedingUserId,'N',bnkbkn,bankAccNo,bnkadr,bnkstt,gcnumber,valuedate,customerrates,gcmidnumb,purpose,benefaddress1,benefaddress2) returning *;
+		 
+		insert into icashobj.ictext(exticn,extsct,extspr,extrct,exten1,exten2,exten3,extsed,extec1,extsbd,extef2,extec2,extsen,extef3,extsof)
+		                    values(ictcnumber,city_name,occupation,benefcity,0,cast(printsettlerate as numeric),printsettleamount,gcmidexpd,rem_fname_nationality,gcmcusdob,
+								   gcmgender,gcmidtype,gcmconame,gcmcustat,srcfound);
+								   		--For Reports				   
+		insert into icashobj.ictevtlog(elticn,eltagc,eltsts,eltrmk,eltusr)
+		                     values(ictcnumber,subfranchcode,'N','Transaction Initiated',sedinguserid);
+							 
+		 update   icashobj.ictcla set iclastno=ictcnumber  where iclastno=lastictcnumber ;
+		 end if;
+		  
+end
+ $BODY$;
+

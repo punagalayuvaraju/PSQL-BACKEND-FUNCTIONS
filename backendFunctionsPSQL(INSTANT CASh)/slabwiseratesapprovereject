@@ -1,0 +1,48 @@
+CREATE OR REPLACE FUNCTION icashobj.slabwiseratesapprovereject(
+	sendingcountry character varying,
+	receivingcountry character varying,
+	sendingcurrency character varying,
+	receivingcurrency character varying,
+	productcode character varying,
+	grouptype character varying,
+	sendinggroup character varying,
+	receivinggroup character varying,
+	commissionmode character varying,
+	commissioncurrency character varying,
+	slabtype character varying,
+	slabcalculation character,
+	sharingstatus character varying,
+	fromamount numeric,
+	toamount numeric,
+	fromtransamount numeric,
+	totransamount numeric,
+	agtsharefixed numeric,
+	mainagtsharefixed numeric,
+	agtsharepercentage numeric,
+	mainagtsharepercentage numeric,
+	approvedstatus character,
+	slabactive character,
+	createduser character varying,
+	createdtime time without time zone,
+	authorizeduser character varying,
+	authorizedtime time without time zone)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+BEGIN
+	UPDATE icashobj.icslabtmp SET tmpapp = approvedstatus, tmpuus = authorizeduser, tmputm = authorizedtime 
+				WHERE tmptyp = slabtype AND tmpfcn = sendingcountry AND tmpfcc = sendingcurrency AND tmptcn = receivingcountry AND tmptcc = receivingcurrency AND
+				tmppcd = productcode AND tmpfmt = fromamount AND tmptmt = toamount;
+		IF(approvedstatus = 'A') THEN
+			INSERT INTO icashobj.ictslab(labtyp,labfcn,labfcc,labtcn,labtcc,labpcd,labcod,labsng,labrcg,labmod,labccr,labflg,labsts,labshr,labfmt,labtmt,labfct,labtct,labfas,labmas,
+								labapc,labmpc,labcus,labctm,labuus,labutm) 
+							VALUES (slabtype,sendingcountry,sendingcurrency,receivingcountry,receivingcurrency,	productcode,grouptype,sendinggroup,receivinggroup,
+									commissionmode,commissioncurrency,slabcalculation,slabactive,sharingstatus,fromamount,toamount,fromtransamount,totransamount,
+									agtsharefixed,mainagtsharefixed,agtsharepercentage,mainagtsharepercentage,createduser,createdtime,authorizeduser,authorizedtime);
+ 		END IF;
+ 	RETURN approvedstatus;		      
+ END
+$BODY$;

@@ -1,0 +1,17 @@
+CREATE OR REPLACE FUNCTION icashobj.agentlog(
+	flogagcd text DEFAULT NULL::text,
+	flogctcd text DEFAULT NULL::text)
+    RETURNS SETOF icashobj.agentfeaturelog 
+    LANGUAGE 'plpgsql'
+
+    
+AS $BODY$
+DECLARE
+   _sql   text := 'select a.flogtype,a.flogoldv,a.flognewv,a.flogdate ,a.floguser ,b.ichdrdes from icashobj.ftrlog a  inner join icashobj.icprmhdr b on a.flogctcd=b.ichdrcod  where a.flogagcd=$1 and flogctcd=$2';
+BEGIN
+ RETURN QUERY
+   EXECUTE _sql
+   USING flogagcd,flogctcd;
+  end
+$BODY$;
+

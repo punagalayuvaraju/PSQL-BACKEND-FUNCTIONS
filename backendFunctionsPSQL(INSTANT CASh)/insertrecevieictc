@@ -1,0 +1,71 @@
+CREATE OR REPLACE FUNCTION icashobj.insertrecevieictc(
+	transactiondetail json[],
+	idnum character varying,
+	reasonfor character varying,
+	paidmode character varying,
+	cashamt character varying,
+	chequeamt character varying,
+	bankname character varying,
+	chequedate character varying,
+	chequeno character varying,
+	recadrees1 character varying,
+	recadrees2 character varying,
+	reccity character varying,
+	recpincode character varying,
+	rectele character varying,
+	status character varying,
+	verifyuser character varying)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+declare
+      counter             numeric:=0;
+      ictcnumber          character varying;
+      approvedvoucher     character varying:= 'XA';
+	  uniquecode          character varying;
+      sendingvoucher      character varying;
+	  vouchersno          character varying;
+begin
+LOOP
+	EXIT WHEN counter=array_length(transactiondetail,1);
+	counter=counter+1;
+  SELECT COUNT(*)+1 INTO uniquecode FROM icashobj.icttrn ;
+				    SELECT lpad(uniquecode::text,4,'0') INTO vouchersno;
+		            sendingvoucher = concat(approvedvoucher,vouchersno);
+					
+		insert into icashobj.icttrn(trnicn,trnsdt,trnstm,trnui1,trnscc,trnsag,trnscr,trnsrt,trnicr,trnsnm,trnsd1,trnsd2,trnsd3,trnstl,trnmno,trnbac,trntyp,
+									trnrag,trnrcc,trnrnm,trnrd1,trnrd2,trnrd3,trnrtl,trntvd,trnsmd,trnbak,trncqn,trncdt,trnrcr,trnrrt,trntam,trnram,trnqus,trnans,trnms1,
+									trnms2,trninf,trnidn,trnrfr,trnpst,trnbnm,trnbc1,trnba1,trnba2,trnrdt,trnbm1,trnbm2,trnbcd,trngcd,trnicd,trnstt,trnlcd,trnvno,trnru1,trnamt,  
+									trnpmd,trnamc,trnamq,trnchd,trnchn,trnpag,trnrtm,trncrg)
+									
+		    values(cast(transactiondetail[counter]->>'ictcnumber'as numeric),transactiondetail[counter]->>'txndate',transactiondetail[counter]->>'txntime',verifyuser
+		           ,cast(transactiondetail[counter]->>'sendingurrencycode' as numeric),cast(transactiondetail[counter]->>'senagentcode' as numeric),
+			        transactiondetail[counter]->>'sencurrencycode',cast(transactiondetail[counter]->>'sencurrencyrate' as numeric),cast(transactiondetail[counter]->>'wsicrate' as numeric),transactiondetail[counter]->>'sendersname',
+				    transactiondetail[counter]->>'senderadd1',transactiondetail[counter]->>'senderadd2',transactiondetail[counter]->>'senderadd3',transactiondetail[counter]->>'sendertel',
+			        transactiondetail[counter]->>'sendermno',transactiondetail[counter]->>'bankacnum',transactiondetail[counter]->>'txntype',cast(transactiondetail[counter]->>'receivingagentcode' as numeric),
+			        cast(transactiondetail[counter]->>'reccountrycode' as numeric),transactiondetail[counter]->>'receiversname',recAdrees1,recAdrees2,
+			        recCity,recTele, transactiondetail[counter]->>'valuedateorg',transactiondetail[counter]->>'sendmode',
+			        transactiondetail[counter]->>'sendbnk',transactiondetail[counter]->>'chequenum',transactiondetail[counter]->>'chequedate',transactiondetail[counter]->>'receivingcurrency',
+			        cast(transactiondetail[counter]->>'trtmt' as numeric),cast(transactiondetail[counter]->>'totalamount' as numeric),cast(transactiondetail[counter]->>'receiveamount' as numeric),transactiondetail[counter]->>'secretques',
+				    transactiondetail[counter]->>'secretans',transactiondetail[counter]->>'purpose',transactiondetail[counter]->>'sendmsg2',transactiondetail[counter]->>'inform',
+			        idNum,'bill completed',status,bankName,
+		            transactiondetail[counter]->>'bankaccount',transactiondetail[counter]->>'bankaddr1',transactiondetail[counter]->>'bankaddr2',current_date,
+				    transactiondetail[counter]->>'branchmsg1',transactiondetail[counter]->>'branchmsg2',transactiondetail[counter]->>'branchcode',transactiondetail[counter]->>'goldcard',
+				    transactiondetail[counter]->>'ictccard',transactiondetail[counter]->>'modeof',transactiondetail[counter]->>'sencurrencycode',sendingvoucher,verifyuser,cast(transactiondetail[counter]->>'sendamount' as numeric),
+				    paidMode,cashAmt::numeric,chequeAmt::numeric,chequeDate,chequeNo,recPinCode::numeric,current_timestamp,cast(transactiondetail[counter]->>'charge' as numeric)) returning trnicn into ictcnumber;
+	            --For Reports
+				  insert into icashobj.ictevtlog(elticn,eltagc,eltsts,eltrmk,eltusr)
+		                     values(cast(transactiondetail[counter]->>'ictcnumber' as numeric),transactiondetail[counter]->>'senagentcode','P','Paid',verifyuser); 
+							 
+                -- UPDATE TRANSACTION STATUS AS 'P'  IN ICTTRML,ICTTRM TABLES
+				UPDATE icashobj.icttrml set trmpst='P'  where trmicn=cast(transactiondetail[counter]->>'ictcnumber'as numeric) ;
+				UPDATE icashobj.icttrm  set trmpst='P' where trmicn=cast(transactiondetail[counter]->>'ictcnumber'as numeric);
+
+				
+END LOOP;
+RETURN 'success';
+end
+$BODY$;

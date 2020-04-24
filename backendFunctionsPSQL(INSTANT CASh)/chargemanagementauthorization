@@ -1,0 +1,35 @@
+CREATE OR REPLACE FUNCTION icashobj.chargemanagementauthorization(
+	tiercode character varying,
+	sendingcountrycode character varying,
+	chargeslabcurrency character varying,
+	receivingcountrycode character varying,
+	receivingcurrency character varying,
+	deliverymode numeric,
+	flaga character,
+	authorisedby character varying,
+	authorisedon date,
+	authorisedat time without time zone)
+    RETURNS character
+    LANGUAGE 'plpgsql'
+
+   
+AS $BODY$
+DECLARE toamount numeric;
+fromamount numeric;
+commcharge numeric;
+commtype character varying;
+         begin
+			    Update icashobj.ictchg set chgflg=flaga,chgaid=authorisedby,chgadt=authorisedon,chgatm=authorisedat
+				                        where (CASE WHEN (sendingcountrycode = '') THEN chgcrd=receivingcurrency ELSE chgcrd=chargeslabcurrency END) 
+				                        AND chgtir=tiercode AND chgmod=deliverymode AND chgflg='' 
+										returning chgfam,chgtam,chgcrg,chgtyp into fromamount,toamount,commcharge,commtype;
+				
+				if(flaga = 'A') then
+				 insert into icashobj.ictctr (chrtir,chrscy,chrrcy,chrmod,chrcrd,chrfam,chrtam,chrcrg,chrtyp,chruid,chrdat,chrtim) 
+				                      values (tiercode,sendingcountrycode,receivingcountrycode,deliverymode,
+											 (CASE WHEN (sendingcountrycode = '') THEN receivingcurrency ELSE chargeslabcurrency END),
+											  fromamount,toamount,commcharge,commtype,authorisedby,authorisedon,authorisedat);
+				end if;
+			return 	flaga;
+		 end
+$BODY$;

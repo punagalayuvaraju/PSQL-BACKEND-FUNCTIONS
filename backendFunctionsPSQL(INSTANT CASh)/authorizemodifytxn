@@ -1,0 +1,17 @@
+CREATE OR REPLACE FUNCTION icashobj.authorizemodifytxn(
+	transactiondetail json[])
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+
+AS $BODY$
+declare counter   numeric:=0;
+begin
+	LOOP
+	    EXIT WHEN counter=array_length(transactiondetail,1);
+	              counter=counter+1;
+         UPDATE icashobj.icttrml SET trmpst = transactiondetail[counter]->>'status'  WHERE trmicn = transactiondetail[counter]->>'trmicn';
+    END LOOP;
+	RETURN 'success';
+	end
+$BODY$;

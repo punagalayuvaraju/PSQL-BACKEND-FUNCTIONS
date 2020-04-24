@@ -1,0 +1,48 @@
+CREATE OR REPLACE FUNCTION icashobj.authorizebulklimtrule(
+	icgrpkey1 character varying,
+	icactcod character varying,
+	icrecord numeric,
+	icrcvcnt character varying,
+	icrcvcur character varying,
+	icrcvhoc character varying,
+	icrcvagt character varying,
+	icrcvnat character varying,
+	icsndcnt character varying,
+	icsndcur character varying,
+	icsndhoc character varying,
+	icsndagt character varying,
+	icsndnat character varying,
+	icrcvmod character varying,
+	icpurscd character varying,
+	icrusdmt numeric,
+	icrustmt numeric,
+	icrfcamt numeric,
+	icrfctmt numeric,
+	icwrkfld character varying,
+	icrecsts1 character varying,
+	icaddusr character varying,
+	icadddat date,
+	icaddtim time without time zone,
+	icmodusr character varying,
+	icmoddat character varying,
+	icmodtim character varying,
+	icautusr character varying,
+	icautdat date,
+	icauttim time without time zone,
+	icrlcamt numeric,
+	icrlctmt numeric)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+  
+AS $BODY$
+DECLARE status character varying;
+BEGIN 
+update icashobj.icblklmtl set icrecsts='Y',icmoddat=current_date,icmodtim=current_time  where icgrpkey=icgrpkey1 returning  icrecsts into status;
+if(status='Y')then
+INSERT INTO icashobj.icblklmt( icgrpkey,icactcod, icrecord, icrcvcnt, icrcvcur, icrcvhoc, icrcvagt, icrcvnat, icsndcnt, icsndcur, icsndhoc, icsndagt, icsndnat, icrcvmod, icpurscd, icrusdmt, icrustmt, icrfcamt, icrfctmt, icwrkfld, icaddusr, icadddat, icaddtim, icmodusr, icautusr, icautdat, icauttim, icrlcamt, icrlctmt)
+	VALUES (icgrpkey1, icactcod, icrecord, icrcvcnt, icrcvcur, icrcvhoc, icrcvagt, icrcvnat, icsndcnt, icsndcur, icsndhoc, icsndagt, icsndnat, icrcvmod, icpurscd, icrusdmt, icrustmt, icrfcamt, icrfctmt, icwrkfld, icaddusr, icadddat, icaddtim, icmodusr, icautusr, icautdat, icauttim, icrlcamt, icrlctmt);
+	return 'Authorized Successfully';
+end if;
+END;
+$BODY$;

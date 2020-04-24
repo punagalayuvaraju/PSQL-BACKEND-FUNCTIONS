@@ -1,0 +1,127 @@
+CREATE OR REPLACE FUNCTION icashobj.subfranchiseauthorization(
+	solefranch numeric,
+	franch numeric,
+	subfranch numeric,
+	combinecode numeric,
+	shortname character varying,
+	longname character varying,
+	countrycode character varying,
+	citycode character varying,
+	branch numeric,
+	address1 character varying,
+	address2 character varying,
+	address3 character varying,
+	principalaccount character varying,
+	commissionaccount character varying,
+	natureofc character varying,
+	natureofp character varying,
+	avaliablelimit numeric,
+	transcationlimit numeric,
+	sendingamount numeric,
+	receivingamount numeric,
+	pernotnlamountlimit numeric,
+	avaliablelimitusd numeric,
+	translimitusd numeric,
+	sendingamountusd numeric,
+	receivedamountusd numeric,
+	totalusd numeric,
+	localcurrency character varying,
+	bank character varying,
+	profitpercentage numeric,
+	holdlimitpercentage numeric,
+	accountbalance numeric,
+	agtchangecustrate character varying,
+	phonenumber character varying,
+	faxnumber character varying,
+	emailaddress character varying,
+	workinghrs character varying,
+	timezone character varying,
+	naturep character varying,
+	dubaipolicefine character varying,
+	directagent character,
+	naturec character varying,
+	usdprizeacc character varying,
+	usdcommissionacc character varying,
+	bankswiftcode character varying,
+	statecode character varying,
+	agtmode character varying,
+	sendcommissiongroup character varying,
+	receivecommissiongroup character varying,
+	firstlvlagnt character,
+	zipcode character varying,
+	countryswift character varying,
+	download character varying,
+	autolmtupd character,
+	authorizedstatus character,
+	recordstatus character,
+	blockrelease character varying,
+	dateformate character varying,
+	agentscode character varying,
+	branchcode1 character varying,
+	branchcode2 character varying,
+	payingbranch character varying,
+	swiftcode character varying,
+	sendingcommission1 numeric,
+	sendingcommission2 numeric,
+	sendcommission1 numeric,
+	sendcommission2 numeric,
+	receivingcommission1 numeric,
+	receivingcommission2 numeric,
+	receivecommission1 numeric,
+	receivecommission2 numeric,
+	branchname character varying,
+	branchcount character varying,
+	sbranchcount character varying,
+	product character varying,
+	limitedaccount character varying,
+	imsflag character varying,
+	modify character varying,
+	settlegroup character varying,
+	sendrategroup character varying,
+	accinwsfl character varying)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+begin
+	UPDATE icashobj.ictagetmp SET agxsts = authorizedstatus WHERE agescd = solefranch AND agefcd = franch AND agesfc = subfranch;
+		IF(authorizedstatus = 'A') THEN
+			IF EXISTS(SELECT * FROM icashobj.ictage WHERE agescd = solefranch AND agefcd = franch AND agesfc = subfranch) THEN
+				UPDATE icashobj.ictage SET agest1 = authorizedstatus WHERE agescd = solefranch AND agefcd = franch AND agesfc = subfranch;
+			ELSE
+				INSERT INTO icashobj.ictage(agescd,agefcd,agesfc,ageccd,agesnm,agelnm,agecnt,agecty,agebrn,agead1,agead2,agead3,ageapa,ageaca,ageapu,ageacu,agetll,
+											agetrl,agesam,ageram,agelus,agetlu,agetru,agesau,agerau,ageluu,agelcd,agebnk,agescm,agercm,agewic,agerca,ageph1,agefx1,ageema,agewhr,
+											agetmz,ageusr,agedte,agetme,agedev,agebpa,agebca,ageswc,agestc,agemod,agecd1,agecd2,agecd3,agezpc,ageswd,agecd4,agechg,agest1,agest2,
+											agest3,agedft,agettc,agecd5,agecd6,agecd7,agecd8,agesv1,agesv2,agesv3,agesv4,agerv1,agerv2,agerv3,agerv4,agewtm,agewt1,agewt2,agewt3,
+											agewt4,agewt5,agewt6,agecd9,agecd10,agecds)
+							VALUES(solefranch,franch,subfranch,combinecode,shortname,longname,countrycode,citycode,branch,address1,address2,address3,principalaccount,
+								   commissionaccount,natureofc,natureofp,avaliablelimit,transcationlimit,sendingamount,receivingamount,pernotnlamountlimit,avaliablelimitusd,
+								   translimitusd,sendingamountusd,receivedamountusd,totalusd,localcurrency,bank,profitpercentage,holdlimitpercentage,accountbalance,
+								   agtchangecustrate,phonenumber,faxnumber,emailaddress,workinghrs,timezone,naturep,dubaipolicefine,directagent,naturec,usdprizeacc,
+								   usdcommissionacc,bankswiftcode,statecode,agtmode,sendcommissiongroup,receivecommissiongroup,firstlvlagnt,zipcode,countryswift,download,
+								   autolmtupd,authorizedstatus,recordstatus,blockrelease,dateformate,agentscode,branchcode1,branchcode2,payingbranch,swiftcode,sendingcommission1,
+								   sendingcommission2,sendcommission1,sendcommission2,receivingcommission1,receivingcommission2,receivecommission1,receivecommission2,
+								   branchname,branchcount,sbranchcount,product,limitedaccount,imsflag,modify,settlegroup,sendrategroup,accinwsfl);
+			END IF;
+		ELSEIF(authorizedstatus = 'R') THEN
+			UPDATE icashobj.ictage SET agest1 = authorizedstatus WHERE agescd = solefranch AND agefcd = franch AND agesfc = subfranch;
+		END IF;
+
+  			INSERT INTO icashobj.ictagel(agescd,agefcd,agesfc,ageccd,agesnm,agelnm,agecnt,agecty,agebrn,agead1,agead2,agead3,ageapa,ageaca,ageapu,ageacu,agetll,agetrl,agesam,
+									 	ageram,agelus,agetlu,agetru,agesau,agerau,ageluu,agelcd,agebnk,agescm,agercm,agewic,agerca,ageph1,agefx1,ageema,agewhr,agetmz,ageusr,
+									 	agedte,agetme,agedev,agebpa,agebca,ageswc,agestc,agemod,agecd1,agecd2,agecd3,agezpc,ageswd,agecd4,agechg,agest3,agedft,agettc,agecd5,
+									 	agecd6,agecd7,agecd8,agesv1,agesv2,agesv3,agesv4,agerv1,agerv2,agerv3,agerv4,agewtm,agewt1,agewt2,agewt3,agewt4,agewt5,agewt6,agecd9,
+									 	agecd10,agecds)
+  								VALUES(solefranch,franch,subfranch,combinecode,shortname,longname,countrycode,citycode,branch,address1,address2,address3,principalaccount,
+								   	commissionaccount,natureofc,natureofp,avaliablelimit,transcationlimit,sendingamount,receivingamount,pernotnlamountlimit,avaliablelimitusd,
+								   	translimitusd,sendingamountusd,receivedamountusd,totalusd,localcurrency,bank,profitpercentage,holdlimitpercentage,accountbalance,
+								   	agtchangecustrate,phonenumber,faxnumber,emailaddress,workinghrs,timezone,naturep,dubaipolicefine,directagent,naturec,usdprizeacc,
+								   	usdcommissionacc,bankswiftcode,statecode,agtmode,sendcommissiongroup,receivecommissiongroup,firstlvlagnt,zipcode,countryswift,download,
+								   	autolmtupd,blockrelease,dateformate,agentscode,branchcode1,branchcode2,payingbranch,swiftcode,sendingcommission1,sendingcommission2,
+								   	sendcommission1,sendcommission2,receivingcommission1,receivingcommission2,receivecommission1,receivecommission2,branchname,branchcount,
+								   	sbranchcount,product,limitedaccount,imsflag,modify,settlegroup,sendrategroup,accinwsfl);
+			RETURN authorizedstatus;
+	END
+$BODY$;

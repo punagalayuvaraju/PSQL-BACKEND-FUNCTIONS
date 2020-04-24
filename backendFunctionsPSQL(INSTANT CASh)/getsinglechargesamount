@@ -1,0 +1,18 @@
+CREATE OR REPLACE FUNCTION icashobj.getsinglechargesamount(
+	receivingcountry text DEFAULT NULL::text,
+	sendingcountry text DEFAULT NULL::text,
+	deliverymode numeric DEFAULT NULL::numeric,
+	tiercode text DEFAULT NULL::text,
+	toamount numeric DEFAULT NULL::numeric,
+	slabcurrency text DEFAULT NULL::text,
+	chargeflag text DEFAULT ' '::text)
+    RETURNS SETOF icashobj.ictchg 
+    LANGUAGE 'plpgsql'
+
+   
+AS $BODY$
+BEGIN
+			RETURN QUERY SELECT * FROM icashobj.ictchg WHERE  chgmod = deliverymode AND chgtir ILIKE tiercode AND chgcrd ILIKE slabcurrency 
+   			    AND chgflg ilike chargeflag AND (CASE WHEN toamount IS NULL THEN CAST(chgtam as TEXT) LIKE '%_%' ELSE chgtam = toamount END);  
+END
+$BODY$;

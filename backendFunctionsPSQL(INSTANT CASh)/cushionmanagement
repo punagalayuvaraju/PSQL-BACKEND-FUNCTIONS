@@ -1,0 +1,73 @@
+
+CREATE OR REPLACE FUNCTION icashobj.cushionmanagement(
+	sendingcountry character varying,
+	sendingcurrency character varying,
+	sendinggroupcode character varying,
+	receivingcountry character varying,
+	receivingcurrency character varying,
+	receivinggroupcode character varying,
+	receivingbidcushion1 numeric,
+	receivingbidcushion2 numeric,
+	receivingbidcushion3 numeric,
+	sendingoffercushion1 numeric,
+	sendingoffercushion2 numeric,
+	sendingoffercushion3 numeric,
+	tiercode character varying,
+	createduser character varying,
+	createddate date,
+	createdtime time without time zone,
+	payingcurrencystatus character,
+	status character)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+DECLARE  rate         numeric;
+         bidrate      numeric;
+		 offerrate    numeric;
+		 bidcushion   numeric;
+		 offercushion numeric;
+		 rcvgrp  character varying;
+		 sndgrp  character varying;
+		 ccycode character varying;
+BEGIN 
+      IF NOT EXISTS (SELECT * FROM icashobj.ictcuh WHERE cuhscn = sendingcountry AND cuhscc = sendingcurrency AND cuhrcn = receivingcountry AND 
+					 (CASE WHEN (receivinggroupcode != '') THEN cuhgrp = receivinggroupcode ELSE cuhgrp = sendinggroupcode END) AND 
+		             cuhrcc = receivingcurrency AND cuhtir = tiercode) THEN 
+																		   
+			IF EXISTS(SELECT A.tircod,B.ratcrd FROM icashobj.icttir A INNER JOIN icashobj.icratmas B ON A.tircur=B.ratcrd 
+				 		 WHERE (CASE WHEN (receivinggroupcode != '') THEN B.ratcrd = receivingcurrency ELSE B.ratcrd = sendingcurrency END))THEN 
+		  
+-- 		   INSERT INTO icashobj.ictcuh (cuhscn,cuhscc,cuhgrp,cuhrcn,cuhrcc,cuhbc1,cuhbc2,cuhbc3,cuhoc1,cuhoc2,cuhoc3,cuhtir,cuhuid,cuhdat,cuhtim,cuhfl1,cuhact)
+-- 		   				VALUES (sendingcountry,sendingcurrency,(CASE WHEN (sendinggroupcode = '') THEN receivinggroupcode ELSE sendinggroupcode END),
+-- 			          			receivingcountry,receivingcurrency,receivingbidcushion1,receivingbidcushion2,receivingbidcushion3,sendingoffercushion1,
+-- 				      			sendingoffercushion2,sendingoffercushion3,tiercode,createduser,createddate,createdtime,payingcurrencystatus,status);
+						 
+--formula
+-- 						    receiving country bid rate - receivingbidcushion1
+--  				rate=  ---------------------------------------------------  
+-- 				            sending country offer rate + sendingoffercushion1
+						 
+ 		SELECT A.ratgrp,A.ratcrd,A.ratbrt,A.ratbcu,A.ratsnd,A.ratort,A.ratocu INTO rcvgrp,ccycode,bidrate,bidcushion,sndgrp,offerrate,offercushion
+				FROM icashobj.icrbtmas B INNER JOIN icashobj.icratmas A ON  B.rbtcrd = A.ratcrd WHERE 
+				(CASE WHEN (sendinggroupcode!='') THEN ratcrd = receivingcurrency OR ( ratsnd = sendinggroupcode AND ratcrd = sendingcurrency) ELSE 
+					 (CASE WHEN (sendinggroupcode='' AND receivinggroupcode='') THEN ratcrd = receivingcurrency OR ratcrd = sendingcurrency ELSE 
+ 						(CASE WHEN (receivinggroupcode!='') THEN (ratcrd = receivingcurrency AND ratgrp = receivinggroupcode) OR ratcrd = sendingcurrency
+						 END)
+					  END) 
+				 END) LIMIT 1 offset 2; 
+
+		raise notice 'rcvgrp => %, ccycode => %, bidrate => %, bidcushion=> %, sndgrp=> % ,offerrate=> %,offercushion=> %' 
+						 				,rcvgrp,ccycode,bidrate,bidcushion,sndgrp,offerrate,offercushion;
+						 
+ 	    rate =  (bidrate - bidcushion) / (offerrate + offercushion);
+		return rate;
+						 
+		else raise exception 'Tier code currency and sending currency mismatch';		
+	    end if;
+      else raise exception 'Already exists'; 
+	end if; 
+end
+$BODY$;

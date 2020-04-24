@@ -1,0 +1,21 @@
+CREATE OR REPLACE FUNCTION icashobj.authorizerebatecurrency(
+	currencyncode character varying,
+	bidrate numeric,
+	currency character varying,
+	status character,
+	authorizeduser character varying,
+	authorizeddate date,
+	authorizedtime time without time zone)
+    RETURNS character
+    LANGUAGE 'plpgsql'
+
+AS $BODY$
+     begin
+	       update icashobj.icrbttmp set rttsts = status,rttaus=authorizeduser,rttadt=authorizeddate,rttatm=authorizedtime where rttcrd=currency;
+	       if(status='Y') then 
+		    insert into icashobj.icrbtmas (rbtncd,rbtcrd,rbtbrt,rbtaus,rbtadt,rbtatm) 
+			values (currencyNcode,currency,bidrate,authorizeduser,authorizeddate,authorizedtime);
+		   end if;
+			return status;		      
+	 end
+$BODY$;

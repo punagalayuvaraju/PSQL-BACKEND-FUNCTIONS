@@ -1,0 +1,32 @@
+CREATE OR REPLACE FUNCTION icashobj.groupcodeauthorization(
+	groupcode character varying,
+	grouptype character,
+	countrycode character varying,
+	description character varying,
+	authorizationstatus character,
+	status character,
+	createduser character varying,
+	createddate date,
+	createdtime time without time zone,
+	authorizeduser character varying,
+	authorizeddate date,
+	authorizedtime time without time zone)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+AS $BODY$
+BEGIN
+		UPDATE icashobj.iapgrmt set grmapp=authorizationstatus,grmaid=authorizeduser,grmadt=authorizeddate,grmatm=authorizedtime 
+								WHERE grmcod=groupcode RETURNING grmact INTO status;
+		IF(status = '1' AND authorizationstatus = 'Y') THEN
+			IF NOT EXISTS (select * from icashobj.iapgrm where grmcod = groupcode) THEN
+		    	INSERT INTO icashobj.iapgrm (grmsts,grmscn,grmcod,grmdes,grmflg,grmuid,grmdat,grmtim,grmaid,grmadt,grmatm) 
+		    					     VALUES (grouptype,countrycode,groupcode,description,grouptype,createduser,createddate,createdtime,
+									         authorizeduser,authorizeddate,authorizedtime);
+			END IF;
+		ELSE 
+			DELETE FROM icashobj.iapgrm where grmcod = groupcode;
+		END IF;		
+		RETURN authorizationstatus;
+END
+$BODY$;

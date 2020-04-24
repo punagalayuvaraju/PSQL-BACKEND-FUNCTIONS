@@ -1,0 +1,40 @@
+
+CREATE OR REPLACE FUNCTION icashobj.slabwiseentry(
+	slabtype character varying,
+	sendingcountry character varying,
+	sendingcurrency character varying,
+	receivingcountry character varying,
+	receivingcurrency character varying,
+	productcode character varying,
+	grouptype character varying,
+	sendgroup character varying,
+	receivegroup character varying,
+	commissionmode character varying,
+	commissioncurrency character varying,
+	slabcalculation character,
+	slabactive character,
+	createduser character varying,
+	createdtime time without time zone)
+    RETURNS character
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+BEGIN
+      if exists( select * from icashobj.icslabtmp where tmptyp=slabtype AND tmpfcn=sendingcountry AND tmptcn=receivingcountry AND tmpfcc=sendingcurrency AND 
+				tmptcc=receivingcurrency AND tmppcd=productcode AND tmpcod = grouptype AND tmpsng= sendgroup AND tmprcg= receivegroup AND tmpmod=commissionmode 
+			   AND tmpccr =commissioncurrency AND tmpflg = slabcalculation ) then
+			   
+			   raise Exception 'Slab for these country Already exists'; 
+			else 
+			      insert into icashobj.icslabtmp (tmptyp,tmpfcn,tmpfcc,tmptcn,tmptcc,tmppcd,tmpcod,tmpsng,tmprcg,tmpmod,tmpccr,tmpflg,tmpsts,tmpcus,tmpctm) values 
+				  (slabtype,sendingcountry,sendingcurrency,receivingcountry,receivingcurrency,productcode,grouptype,sendgroup,receivegroup,commissionmode,
+				   commissioncurrency,slabcalculation,slabactive,createduser,createdtime);
+				   
+				   return slabactive;
+	end if;			   
+END 
+
+$BODY$;
+

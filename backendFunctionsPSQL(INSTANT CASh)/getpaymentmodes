@@ -1,0 +1,17 @@
+CREATE OR REPLACE FUNCTION icashobj.getpaymentmodes(
+	tirecode character varying)
+    RETURNS SETOF icashobj.ictmod 
+    LANGUAGE 'plpgsql'
+
+ 
+AS $BODY$
+DECLARE _SQL text:='SELECT b.* FROM icashobj.ictmds  a inner join icashobj.ictmod b on a.pdsicd=b.modcod::varchar   where a.pdsmcd=$1 and b.modcod< $2';
+_ALL text :='SELECT * FROM icashobj.ictmod';
+BEGIN
+if tirecode <> '' then 
+RETURN QUERY execute _SQL USING tirecode ,20;
+else
+RETURN QUERY execute _ALL;
+END IF;
+END;
+$BODY$;

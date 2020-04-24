@@ -1,0 +1,45 @@
+CREATE OR REPLACE FUNCTION icashobj.slabwiseratescreation(
+	slabtype character varying,
+	sendingcountry character varying,
+	sendingcurrency character varying,
+	receivingcountry character varying,
+	receivingcurrency character varying,
+	productcode character varying,
+	grouptype character varying,
+	sendinggroup character varying,
+	receivinggroup character varying,
+	commissionmode character varying,
+	commissioncurrency character varying,
+	slabcalculation character,
+	slabactive character,
+	sharingstatus character varying,
+	fromamount numeric,
+	toamount numeric,
+	fromtransamount numeric,
+	totransamount numeric,
+	agtsharefixed numeric,
+	mainagtsharefixed numeric,
+	agtsharepercentage numeric,
+	mainagtsharepercentage numeric,
+	createduser character varying,
+	createdtime time without time zone)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+BEGIN
+	IF EXISTS(SELECT * FROM icashobj.icslabtmp where tmptyp = slabtype AND tmpfcn = sendingcountry AND tmpfcc = sendingcurrency AND tmptcn = receivingcountry AND
+			 tmptcc = receivingcurrency AND tmppcd = productcode AND tmpshr = sharingstatus) then
+		RAISE EXCEPTION 'Combination of slabtype, Sending/Receiving Country & Currency, Product Code & Sharing Status are Already Exists';
+	ELSE
+		INSERT INTO icashobj.icslabtmp(tmptyp,tmpfcn,tmpfcc,tmptcn,tmptcc,tmppcd,tmpcod,tmpsng,tmprcg,tmpmod,tmpccr,tmpflg,tmpsts,
+														 tmpshr,tmpfmt,tmptmt,tmpfct,tmptct,tmpfas,tmpmas,tmpapc,tmpmpc,tmpcus,tmpctm) 
+							VALUES (slabtype,sendingcountry,sendingcurrency,receivingcountry,receivingcurrency,	productcode,grouptype,sendinggroup,receivinggroup,
+									commissionmode,commissioncurrency,slabcalculation,slabactive,sharingstatus,fromamount,toamount,fromtransamount,totransamount,
+									agtsharefixed,mainagtsharefixed,agtsharepercentage,mainagtsharepercentage,createduser,createdtime);
+	RETURN sharingstatus;
+	END IF;
+END
+$BODY$;

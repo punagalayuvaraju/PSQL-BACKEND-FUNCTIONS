@@ -1,0 +1,31 @@
+CREATE OR REPLACE FUNCTION icashobj.groupcodecreation(
+	grouptype character,
+	countrycode character varying,
+	description character varying,
+	currentdate date,
+	currenttime time without time zone,
+	createduser character varying)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+    
+AS $BODY$
+DECLARE 
+      uniquecode character varying='001';
+	  groupcode character varying;
+	  cntgroupcode character varying;
+BEGIN
+		SELECT cntgrc INTO cntgroupcode FROM icashobj.ictcnt WHERE cntscd=countrycode;
+				 
+		IF EXISTS(SELECT * FROM icashobj.iapgrmt WHERE grmcod ILIKE concat(cntgroupcode,'%')) THEN
+			SELECT count(*)+1 INTO uniquecode FROM icashobj.iapgrmt WHERE grmcod ILIKE concat(cntgroupcode,'%');
+		    SELECT lpad(uniquecode::character varying,3,'0') INTO uniquecode;
+		END IF;
+		
+		groupcode=concat(cntgroupcode,uniquecode);
+		
+		INSERT INTO icashobj.iapgrmt (grmcod,grmsts,grmscn,grmdes,grmdat,grmuid,grmtim,grmflg,grmact) 
+				              VALUES (groupcode,grouptype,countrycode,description,currentdate,createduser,currenttime,grouptype,'1');
+		RETURN groupcode;
+END
+$BODY$;

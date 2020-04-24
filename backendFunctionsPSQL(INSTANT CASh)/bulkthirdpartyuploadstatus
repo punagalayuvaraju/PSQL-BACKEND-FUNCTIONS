@@ -1,0 +1,47 @@
+
+CREATE OR REPLACE FUNCTION icashobj.bulkthirdpartyuploadstatus(
+	buhbcn1 text DEFAULT ''::text,
+	buharn1 text DEFAULT ''::text,
+	buhsys1 text DEFAULT ''::text,
+	buhars1 text DEFAULT ''::text,
+	buhfln1 text DEFAULT ''::text,
+	buhust1 text DEFAULT ''::text,
+	buhinc1 numeric DEFAULT 0,
+	buhskc1 numeric DEFAULT 0,
+	buhbnm1 text DEFAULT ''::text,
+	buhswt1 text DEFAULT ''::text,
+	buhctu1 text DEFAULT ''::text,
+	rowcnt numeric DEFAULT 0,
+	clmcnt numeric DEFAULT 0,
+	buhctd1 date DEFAULT (
+	'now'::text)::date,
+	buhctt1 time without time zone DEFAULT (
+	'now'::text)::time without time zone,
+	buhmdd1 date DEFAULT (
+	'now'::text)::date,
+	buhmdt1 time without time zone DEFAULT (
+	'now'::text)::time without time zone,
+	budcdt date DEFAULT (
+	'now'::text)::date,
+	budctm time without time zone DEFAULT (
+	'now'::text)::time without time zone)
+    RETURNS boolean
+    LANGUAGE 'plpgsql'
+
+    
+AS $BODY$
+    DECLARE recordid integer;
+	BEGIN
+	
+	
+	INSERT INTO icashobj.bnkuplh (buhbcn,buharn,buhsys,buhars,buhfln,buhust,buhinc,buhskc,buhbnm,buhswt,buhctu,buhctd,buhctt,buhmdu,buhmdd,buhmdt)
+	                      VALUES (buhbcn1,buharn1,buhsys1,buhars1,buhfln1,buhust1,buhinc1,buhskc1,buhbnm1,buhswt1,buhctu1,buhctd1,buhctt1,buhctu1,buhmdd1,buhmdt1) returning buhaid into recordid;
+						  if(recordid<>0) then 
+	INSERT INTO icashobj.bnkupld (budhid,budrno,budcno,budcdt,budctm,budsts)
+	                      VALUES (recordid,rowcnt,clmcnt,budcdt,budctm,'Y');
+							 return true;
+							 else return false;
+							 end if;
+	
+	END
+   $BODY$;

@@ -1,0 +1,145 @@
+CREATE OR REPLACE FUNCTION icashobj.verifytransaction(
+	transactiondetail json[],
+	status character varying,
+	verifyuser character varying)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+DECLARE
+      counter             numeric:=0;
+      ictcnumber          character varying;
+	  approvedvoucher     character varying:= 'XA';
+	  uniquecode          character varying;
+      sendingvoucher      character varying;
+	  vouchersno          character varying;
+	  iccardnumber        character varying;
+	  benaddress1         character varying;
+	  benaddress2         character varying;
+	  bentelephone        character varying;
+	  benbankname         character varying;
+	  benbankacnum        character varying;
+	  benbankadd1         character varying;
+	  benbankadd2         character varying;
+	  benidnum            character varying;
+	  paymentmode         character varying;
+	  nationalitycode     numeric;
+	  benmobile           character varying;
+	  crtdate             character varying;
+	  crttime             character varying; 
+	  fname               character varying;
+	  mname               character varying;
+	  lname               character varying;
+	  relation            character varying;
+	  beneficiaryidtype   character varying;
+BEGIN
+if(status = 'Y') then 
+	LOOP
+	EXIT WHEN counter=array_length(transactiondetail,1);
+	counter=counter+1;
+	
+					
+					--->> verifying TXn Data (Y)
+					
+	  insert into icashobj.icttrm(trmicn,trmsdt,trmstm,trmui1,trmui2,trmscc,trmsag,trmscr,trmsrt,trmicr,trmsnm,trmsd1,trmsd2,trmsd3,trmstl,trmmno,trmbac,trmtyp,trmrag,trmrcc,trmrnm,
+								 trmrd1,trmrd2,trmrd3,trmrtl,trmtvd,trmsmd,trmbak,trmcqn,trmcdt,trmrcr,trmrrt,trmtam,trmram,trmqus,trmans,trmms1,trmms2,trminf,trmidn,trmrfr,
+								 trmpst,trmbnm,trmbka,trmba1,trmba2,trmrdt,trmbm1,trmbm2,trmbcd,trmgcd,trmicd,trmstt,trmamt)
+					 
+					 
+			values(cast(transactiondetail[counter]->>'ictcnumber'as numeric),transactiondetail[counter]->>'txndate',transactiondetail[counter]->>'txntime',transactiondetail[counter]->>'trmui1',
+		            transactiondetail[counter]->>'trmui2',cast(transactiondetail[counter]->>'sendingurrencycode' as numeric),cast(transactiondetail[counter]->>'senagentcode' as numeric),
+			        transactiondetail[counter]->>'sencurrencycode',cast(transactiondetail[counter]->>'sencurrencyrate' as numeric),cast(transactiondetail[counter]->>'wsicrate' as numeric),transactiondetail[counter]->>'sendersname',
+				    transactiondetail[counter]->>'senderadd1',transactiondetail[counter]->>'senderadd2',transactiondetail[counter]->>'senderadd3',transactiondetail[counter]->>'sendertel',
+			        transactiondetail[counter]->>'sendermno',transactiondetail[counter]->>'bankacnum',transactiondetail[counter]->>'txntype',cast(transactiondetail[counter]->>'receivingagentcode' as numeric),
+			        cast(transactiondetail[counter]->>'reccountrycode' as numeric),transactiondetail[counter]->>'receiversname',transactiondetail[counter]->>'receiveradd1',transactiondetail[counter]->>'receiveradd2',
+			        transactiondetail[counter]->>'receiveradd3',transactiondetail[counter]->>'receivertel', transactiondetail[counter]->>'valuedateorg',transactiondetail[counter]->>'sendmode',
+			        transactiondetail[counter]->>'sendbnk',transactiondetail[counter]->>'chequenum',transactiondetail[counter]->>'chequedate',transactiondetail[counter]->>'receivingcurrency',
+			        cast(transactiondetail[counter]->>'trtmt' as numeric),cast(transactiondetail[counter]->>'totalamount' as numeric),cast(transactiondetail[counter]->>'receiveamount' as numeric),transactiondetail[counter]->>'secretques',
+				    transactiondetail[counter]->>'secretans',transactiondetail[counter]->>'purpose',transactiondetail[counter]->>'sendmsg2',transactiondetail[counter]->>'inform',
+			        transactiondetail[counter]->>'identification',transactiondetail[counter]->>'reasonfor','Y',transactiondetail[counter]->>'bankname',
+		            transactiondetail[counter]->>'bankaccount',transactiondetail[counter]->>'bankaddr1',transactiondetail[counter]->>'bankaddr2',transactiondetail[counter]->>'valuedateorg',
+				    transactiondetail[counter]->>'branchmsg1',transactiondetail[counter]->>'branchmsg2',transactiondetail[counter]->>'branchcode',transactiondetail[counter]->>'goldcard',
+				    transactiondetail[counter]->>'ictccard',transactiondetail[counter]->>'modeof',cast(transactiondetail[counter]->>'sendamount' as numeric));
+					
+					
+					
+	insert into icashobj.ictgcr(gcrino,gcrcac,gcrsnm,gcrsd1,gcrsd2,gcrstl,gcrrnm,gcrrd1,gcrrd2,gcrrtl,gcridn,gcrcui,gcridt,gcrdtl,gcrnsl,gcrmno,gcrrmo,
+											 gcrdob,gcrsfn,gcrsmn,gcrsln,gcrrfn,gcrrmn,gcrrln,gcrspr,gcrbidt,gcrrie,gcrcmpname,gcrelben,gcrsdb,gcrbrc,gcrbnm,gcrbac,gcrba1,gcrba2,gcrsd3,gcrrd3,gcrrestyp)
+											 
+											 
+			values( transactiondetail[counter]->>'ictccard',cast(transactiondetail[counter]->>'senagentcode' as numeric),transactiondetail[counter]->>'sendersname',transactiondetail[counter]->>'senderadd1',
+				    transactiondetail[counter]->>'senderadd2',transactiondetail[counter]->>'sendertel',transactiondetail[counter]->>'receiversname',transactiondetail[counter]->>'receiveradd1',
+				    transactiondetail[counter]->>'receiveradd2',transactiondetail[counter]->>'receivertel', transactiondetail[counter]->>'beneficiaryidnum',verifyuser,transactiondetail[counter]->>'remitteridtype',transactiondetail[counter]->>'identification',
+				    cast(transactiondetail[counter]->> 'bennationality' as numeric), transactiondetail[counter]->>'sendermno',transactiondetail[counter]->>'benmobile',transactiondetail[counter]->>'beneficiarydob', SPLIT_PART(transactiondetail[counter]->>'sendersname', ',', 1),
+				     SPLIT_PART(transactiondetail[counter]->>'sendersname', ',', 2), SPLIT_PART(transactiondetail[counter]->>'sendersname', ',', 3), SPLIT_PART(transactiondetail[counter]->>'receiversname', ',', 1),
+				   SPLIT_PART(transactiondetail[counter]->>'receiversname', ',', 2), SPLIT_PART(transactiondetail[counter]->>'receiversname', ',', 3),transactiondetail[counter]->>'occupation',
+				  transactiondetail[counter]->>'beneficiaryidtyp',transactiondetail[counter]->>'gcmidexpd',transactiondetail[counter]->>'companyname',transactiondetail[counter]->>'relationship',transactiondetail[counter]->>'remitterdob',
+				   transactiondetail[counter]->>'sendergender',transactiondetail[counter]->>'bankname',transactiondetail[counter]->>'bankaccount',transactiondetail[counter]->>'bankaddr1',transactiondetail[counter]->>'bankaddr2',transactiondetail[counter]->>'sendercityname',transactiondetail[counter]->>'benefcity',transactiondetail[counter]->>'remitterresidencystatus');
+					
+                    --getting Temp Beneficiary data
+		
+		           select 
+				   benfbno,benfrd1,benfrd2,benfrtl,benfbnm,benfbac,benfba1,benfba2,benfdtl,benfnsl,benfpmd,benfrmo,benfcdt,
+				  benfctm,benfrfn,benfrmn,benfrln,benrlt,benfidt
+				  into iccardnumber,benaddress1,benaddress2,bentelephone,benbankname,benbankacnum,benbankadd1,benbankadd2,benidnum,nationalitycode,paymentmode,
+												  benmobile, crtdate,crttime,fname,mname,lname,relation,beneficiaryidtype
+				  from icashobj.ictbenfl where benfbno=transactiondetail[counter]->>'ictccard';  
+				   
+				                                  
+                         -- copyeing  beneficiary data  into permanent table
+				  
+					insert into icashobj.ictbenf(benfbno,benfrd1,benfrd2,benfrtl,benfbnm,benfbac,benfba1,benfba2,benfdtl,benfpmd,benfnsl,benfrmo,benfcdt,benfctm,benfrfn,benfrmn,benfrln,benrlt,benfmdt,benfmtm,benfmui,benfidt)
+					                      values(iccardnumber,benaddress1,benaddress2,bentelephone,benbankname,benbankacnum,benbankadd1,benbankadd2,benidnum,paymentmode,nationalitycode::numeric,benmobile,crtdate,crttime,
+												 fname,mname,lname,relation,current_date,current_time,verifyuser,beneficiaryidtype);
+                     -- updateing  beneficiary status Y 
+					update icashobj.ictbenfl set benfrtp='Y' where benfbno=transactiondetail[counter]->>'ictccard';
+					
+                    -- upadating status icttrml.trmpst to Y
+					update icashobj.icttrml set trmpst='Y'  where trmicn=cast(transactiondetail[counter]->>'ictcnumber' as numeric);
+					--For Reports
+					insert into icashobj.ictevtlog(elticn,eltagc,eltsts,eltrmk,eltusr)
+		                     values(cast(transactiondetail[counter]->>'ictcnumber' as numeric),transactiondetail[counter]->>'senagentcode','Y','Send',verifyuser);
+					
+					
+					
+	raise notice '%',transactiondetail[counter]->>'ictcnumber';
+	END LOOP;
+	else
+	LOOP
+	--> For Rejecting Txn Data (R)
+	EXIT WHEN counter=array_length(transactiondetail,1);
+	counter=counter+1;
+	insert into icashobj.icttrm(trmicn,trmsdt,trmstm,trmui1,trmui2,trmscc,trmsag,trmscr,trmsrt,trmicr,trmsnm,trmsd1,trmsd2,trmsd3,trmstl,trmmno,trmbac,trmtyp,trmrag,trmrcc,trmrnm,
+								 trmrd1,trmrd2,trmrd3,trmrtl,trmtvd,trmsmd,trmbak,trmcqn,trmcdt,trmrcr,trmrrt,trmtam,trmram,trmqus,trmans,trmms1,trmms2,trminf,trmidn,trmrfr,
+								 trmpst,trmbnm,trmbka,trmba1,trmba2,trmrdt,trmbm1,trmbm2,trmbcd,trmgcd,trmicd,trmstt,trmamt)
+					 
+					 
+			values(cast(transactiondetail[counter]->>'ictcnumber'as numeric),transactiondetail[counter]->>'txndate',transactiondetail[counter]->>'txntime',transactiondetail[counter]->>'trmui1',
+		            transactiondetail[counter]->>'trmui2',cast(transactiondetail[counter]->>'sendingurrencycode' as numeric),cast(transactiondetail[counter]->>'senagentcode' as numeric),
+			        transactiondetail[counter]->>'sencurrencycode',cast(transactiondetail[counter]->>'sencurrencyrate' as numeric),cast(transactiondetail[counter]->>'wsicrate' as numeric),transactiondetail[counter]->>'sendersname',
+				    transactiondetail[counter]->>'senderadd1',transactiondetail[counter]->>'senderadd2',transactiondetail[counter]->>'senderadd3',transactiondetail[counter]->>'sendertel',
+			        transactiondetail[counter]->>'sendermno',transactiondetail[counter]->>'bankacnum',transactiondetail[counter]->>'txntype',cast(transactiondetail[counter]->>'receivingagentcode' as numeric),
+			        cast(transactiondetail[counter]->>'reccountrycode' as numeric),transactiondetail[counter]->>'receiversname',transactiondetail[counter]->>'receiveradd1',transactiondetail[counter]->>'receiveradd2',
+			        transactiondetail[counter]->>'receiveradd3',transactiondetail[counter]->>'receivertel', transactiondetail[counter]->>'valuedateorg',transactiondetail[counter]->>'sendmode',
+			        transactiondetail[counter]->>'sendbnk',transactiondetail[counter]->>'chequenum',transactiondetail[counter]->>'chequedate',transactiondetail[counter]->>'receivingcurrency',
+			        cast(transactiondetail[counter]->>'trtmt' as numeric),cast(transactiondetail[counter]->>'totalamount' as numeric),cast(transactiondetail[counter]->>'receiveamount' as numeric),transactiondetail[counter]->>'secretques',
+				    transactiondetail[counter]->>'secretans',transactiondetail[counter]->>'purpose',transactiondetail[counter]->>'sendmsg2',transactiondetail[counter]->>'inform',
+			        transactiondetail[counter]->>'identification',transactiondetail[counter]->>'reasonfor','R',transactiondetail[counter]->>'bankname',
+		            transactiondetail[counter]->>'bankaccount',transactiondetail[counter]->>'bankaddr1',transactiondetail[counter]->>'bankaddr2',transactiondetail[counter]->>'valuedateorg',
+				    transactiondetail[counter]->>'branchmsg1',transactiondetail[counter]->>'branchmsg2',transactiondetail[counter]->>'branchcode',transactiondetail[counter]->>'goldcard',
+				    transactiondetail[counter]->>'ictccard',transactiondetail[counter]->>'modeof',CAST(transactiondetail[counter]->>'sendamount' as numeric));
+					
+					
+                     -- upadating status icttrml.trmpst to R txn data
+					update icashobj.icttrml set trmpst='R'  where trmicn=cast(transactiondetail[counter]->>'ictcnumber' as numeric);
+					-- updating status ictbenfl.benfrtp to R For Rejecting Benficiary Data For Particular  Txn
+					update icashobj.ictbenfl set benfrtp='Y' where benfbno=transactiondetail[counter]->>'ictccard';
+					END LOOP;
+		
+	end if;
+	RETURN 'success';
+END
+$BODY$;
+

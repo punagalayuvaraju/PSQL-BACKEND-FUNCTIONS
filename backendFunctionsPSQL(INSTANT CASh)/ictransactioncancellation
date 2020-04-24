@@ -1,0 +1,168 @@
+CREATE OR REPLACE FUNCTION icashobj.ictransactioncancellation(
+	ictcnumber numeric,
+	ordernumber character varying,
+	principleamount numeric,
+	commissionamount numeric,
+	commissionpercent numeric,
+	refundtotalamount numeric,
+	originaltransrate numeric,
+	marketrate numeric,
+	calculateclrate numeric,
+	cancelleduser character varying,
+	cancelleddate date,
+	cancelledtime time without time zone,
+	cancelledstatus character,
+	reason character varying,
+	rejectflag character,
+	originstatus character,
+	approvedstatus character,
+	cancellationlevel numeric,
+	rejectreason character varying,
+	approvedrejuser character varying,
+	approvedrejdate date,
+	approvedrejtime time without time zone,
+	branchagentid character varying,
+	branchoragent character,
+	branchusername character varying,
+	branchuserdate date,
+	branchusertime time without time zone)
+    RETURNS character
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+ Declare
+
+			sendingvoucher      character varying;
+			receivingvoucher    character varying;
+			uniquecode          character varying;
+			approvedvoucher     character varying:= 'XA';  
+			rejectedvoucher     character varying:= 'XR';
+			somethngcode        character varying:=    0;
+ begin
+	  
+-- Cancellation can be done either for branch level transactions or for agent transactions  	  
+
+    -- Agent Cancellation
+			  
+-- 	if exists(select usridc into Agentuser from icashobj.ictusr where usridc = cancelleduser) then 
+			  
+	-- Agent Cancellation lvl-I
+
+	if( cancelledstatus = 'B' ) then
+			  -- Cancellation status coming from form like 'B'
+		if exists(select * from icashobj.icttrm where trmicn= ictcnumber AND trmpst = 'Y') then
+		
+ 	    	if not exists(select * from icashobj.ictcatt where caticn = ictcnumber AND catsts = cancelledstatus) then 
+				insert into icashobj.ictcatt(caticn,catorn,catrap,catcmp,catrac,catrat,catotr,catcmr,catccr,catur1a,catdt1a,cattm1a,catsts,
+											  catcamt,catpst,catlvl,cattype,cattyp1) 
+			    	values (ictcnumber,ordernumber,principleamount,commissionamount,commissionpercent,refundtotalamount,originaltransrate,marketrate,calculateclrate,
+				 		 cancelleduser,cancelleddate,cancelledtime,cancelledstatus,reason,originstatus,cancellationlevel,branchagentid,
+						 branchoragent);
+						 
+				update icashobj.icttrml set trmpst = cancelledstatus where trmicn = ictcnumber;
+			  	update icashobj.icttrm  set trmpst = cancelledstatus where trmicn = ictcnumber;			 
+					
+				   return cancelledstatus;	   
+				else raise exception 'Already Cancelled';
+			end if;
+				else raise exception 'ICTC number does not exist';   
+	 	end if;
+	end if;       
+			   
+			   -- Agent Cancellation lvl-II
+			   -- Approve/Reject
+			   
+	if(cancelledstatus = 'C') then
+		if exists(select * from icashobj.icttrm where trmicn= ictcnumber and trmpst = 'B') then
+	   
+--      voucher creation(sending)
+--      Generate voucher for sending side (ex:-XA0001/XR0001)
+
+			SELECT COUNT(*)+1 INTO uniquecode FROM icashobj.ictcat;
+			SELECT lpad(uniquecode::text,4,'0') INTO somethngcode;
+		            sendingvoucher = concat(approvedvoucher,somethngcode);	
+			   
+			if not exists(select * from icashobj.ictcatt where caticn = ictcnumber AND catsts = cancelledstatus) then 
+				update icashobj.ictcatt set catlvl = cancellationlevel,catur1b = approvedrejuser,catdt1b = approvedrejdate,cattm1b = approvedrejtime, 
+				                            catvu1 = sendingvoucher, catapp = approvedstatus,catsts = cancelledstatus  where  caticn = ictcnumber;	
+												
+				insert into icashobj.ictcat (caticn,catorn,catrap,catcmp,catrac,catrat,catotr,catcmr,catccr,catur1,catdt1,cattm1,catur2,catdt2,cattm2,catsts,
+					            catvu1,catpst) values (ictcnumber,ordernumber,principleamount,commissionamount,commissionpercent,refundtotalamount,
+							    originaltransrate,marketrate,calculateclrate,cancelleduser,cancelleddate,cancelledtime,approvedrejuser,approvedrejdate,approvedrejtime,
+								cancelledstatus,sendingvoucher,originstatus);
+								
+				update icashobj.icttrml set trmpst = cancelledstatus where trmicn = ictcnumber;
+			    update icashobj.icttrm  set trmpst = cancelledstatus where trmicn = ictcnumber;			
+										 
+				return sendingvoucher;
+					   
+			    else raise exception 'Cancellation Level-II Already done';	   
+			 end if;
+			else raise exception 'ICTC Number does not exist';
+		end if;
+	end if;	
+		
+		-- Branch Cancellation as lvl-III
+		
+	if(cancelledstatus = 'A') then 
+		if exists(select * from icashobj.icttrm where trmicn= ictcnumber and trmpst = 'C') then
+		-- Voucher creation(Receiving)
+		-- Generate voucher for receiving side (ex:-XA0001/XR0001/A00001)
+		         
+			SELECT COUNT(*)+1 INTO uniquecode FROM icashobj.ictcat where catsts = cancelledstatus;
+ 		    SELECT lpad(uniquecode::text,5,'0') INTO somethngcode;
+ 		        receivingvoucher = concat(cancelledstatus,somethngcode); 
+		   
+		    if not exists(select * from icashobj.ictcatt where caticn = ictcnumber AND catsts = cancelledstatus ) then 
+			 	 
+				update icashobj.ictcatt set catlvl = cancellationlevel,catur1b = branchusername,catdt1b = branchuserdate,cattm1b = branchusertime, 
+				                            catvu2 = receivingvoucher,catapp = approvedstatus,catsts = cancelledstatus where caticn = ictcnumber;
+											
+				update icashobj.icttrml set trmpst = cancelledstatus where trmicn = ictcnumber;
+			    update icashobj.icttrm  set trmpst = cancelledstatus where trmicn = ictcnumber;		
+				
+			 end if;
+			 if not exists(Select * from icashobj.ictcat where caticn = ictcnumber AND catsts = cancelledstatus) then 
+				update icashobj.ictcat set catsts  = cancelledstatus,catvu2 = receivingvoucher,catur3 = branchusername,catdt3 = branchuserdate,cattm4 = branchusertime 
+						where caticn = ictcnumber;
+					return receivingvoucher;
+				else raise exception 'Cancelled Trx Authorization is Already Done';
+			  end if;
+			   else raise exception 'ICTC Number does not exist';
+		  	end if;
+		 end if;
+	    
+        if(cancelledstatus = 'R') THEN 
+			if exists(select * from icashobj.icttrm where trmicn= ictcnumber and trmpst = 'B') then
+--      Generate Rejected voucher for sending side (ex:-XA0001/XR0001)
+				     
+		   		SELECT COUNT(*)+1 INTO uniquecode FROM icashobj.ictcat where catrej = cancelledstatus;
+		   		SELECT lpad(uniquecode::text,4,'0') INTO somethngcode;
+		   				rejectedvoucher = concat(rejectvoucher,somethngcode);
+			
+				if not exists(select * from icashobj.ictcatt where caticn=ictnmber AND catsts=cancelledstatus) then
+		      
+			  		update icashobj.ictcatt set catlvl = cancellationlevel,catur1b = approvedrejuser,catdt1b = approvedrejdate,cattm1b = approvedrejtime, 
+				                       catvu1 = rejectedvoucher,catsts = cancelledstatus,catrej = rejectflag,canrejr = rejectreason  where  caticn = ictcnumber;
+						update icashobj.icttrml set trmpst = cancelledstatus where trmicn = ictcnumber;
+						update icashobj.icttrm  set trmpst = cancelledstatus where trmicn = ictcnumber;						   
+				end if;
+				
+				if not exists(select * from icashobj.ictcat where caticn=ictnmber AND catsts=cancelledstatus) then
+					insert into icashobj.ictcat (caticn,catorn,catrap,catcmp,catrac,catrat,catotr,catcmr,catccr,catur1,catdt1,cattm1,catur2,catdt2,cattm2,catsts,catvu1,
+												catcamt,catrej,catpst) 
+						values (ictcnumber,ordernumber,principleamount,commissionamount,commissionpercent,refundtotalamount,originaltransrate,marketrate,calculateclrate,
+								cancelleduser,cancelleddate,cancelledtime,approvedrejuser,approvedrejdate,approvedrejtime,cancelledstatus,rejectedvoucher,reason,
+								rejectflag,originstatus); 
+			       
+				    return rejectedvoucher;
+			  		else raise exception 'ICTC % is already Rejected ',ictcnumber ;
+				end if;	
+			 		else raise exception 'ICTC Number does not exist';
+		  	end if;
+		end if;
+-- 	end if;	
+end 
+$BODY$;

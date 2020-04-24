@@ -1,0 +1,84 @@
+CREATE OR REPLACE FUNCTION icashobj.extendedfeatures(
+	agentid numeric,
+	catdes character varying,
+	userinfo character varying,
+	date1 date,
+	time1 timestamp without time zone,
+	featname character varying,
+	featcap character varying,
+	featval character varying)
+    RETURNS text
+    LANGUAGE 'plpgsql'
+
+    
+AS $BODY$
+DECLARE
+	agentInfo icashobj.ictage%ROWTYPE;
+	categoryInfo icashobj.icprmhdr%ROWTYPE;
+	featureInfo icashobj.ftrmas%ROWTYPE;
+	featureDetail icashobj.ftrdtl%ROWTYPE;
+	featureVal icashobj.ftrval%ROWTYPE;
+BEGIN
+	SELECT * INTO agentInfo FROM icashobj.ictage WHERE agesfc = agentId;
+	SELECT * INTO categoryInfo FROM icashobj.icprmhdr WHERE ichdrdes = catDes;
+	IF EXISTS(SELECT * FROM icashobj.ftrmas WHERE fmasagcd = agentId::varchar AND fmasname = catDes) THEN
+	UPDATE icashobj.ftrmas SET fmasagcd = agentInfo.agesfc,fmasasfs = agentInfo.ageccd,fmasctcd = categoryInfo.ichdrcod,fmasname = catDes,
+		fmascusr = userInfo WHERE  fmasagcd = agentId::varchar AND fmasname = catDes RETURNING fmasagid,fmasagcd INTO featureInfo.fmasagid,featureInfo.fmasagcd;
+	RAISE NOTICE 'FTRMAS Updated';
+	INSERT INTO icashobj.ftrmasl(fmasagcd,fmasasfs,fmasctcd,fmasname,fmascusr,fmasagid,fmascdat,fmasctim,fmasltp,fmaslur) VALUES 
+				(agentInfo.agesfc,agentInfo.ageccd,categoryInfo.ichdrcod,categoryInfo.ichdrdes,userInfo,featureInfo.fmasagid,date1,time1,'C',userInfo);
+	RAISE NOTICE 'FTRMASL Log inserted';
+-- 			FTRMAS AND FTRMASL tables are updated and  inserted
+	
+	UPDATE icashobj.ftrdtl SET fdtlname = featName,fdtlcapn = featCap WHERE fdtlagcd = featureInfo.fmasagcd AND fdtlmsid = featureInfo.fmasagid 
+	RETURNING fdtlagid INTO featureDetail.fdtlagid;
+	RAISE NOTICE 'FTRDTL updated';
+	INSERT INTO icashobj.ftrdtll(fdtlagid,fdtlname,fdtlcapn,fdtlagcd,fdtlmsid,fdtlcdat,fdtlctime,fdtlltp) 
+			VALUES(featureDetail.fdtlagid,featName,featCap,featureInfo.fmasagcd,featureInfo.fmasagid,date1,time1,'C');
+	RAISE NOTICE 'FTRDTLL LOG inserted';
+-- 			FTRDTL AND FTRDTLL tables are updated and  inserted
+
+	UPDATE icashobj.ftrval SET fvaldval = featVal,fvalcusr = userinfo WHERE fvaldtid = featureDetail.fdtlagid RETURNING fvalagid INTO featureVal.fvalagid;
+	RAISE NOTICE 'FTRVAL updated';
+	INSERT INTO icashobj.FTRVALL(fvaldtid,fvaldval,fvalagid,fvalcdat,fvalctim,fvalltp,fvalcusr) VALUES 
+	(featureDetail.fdtlagid,featVal,featureVal.fvalagid,date1,time1,'C',userinfo);
+	RAISE NOTICE 'FTRVALL inserted';
+-- 			FTRVAL AND FTRVALL tables inserted
+	INSERT INTO icashobj.ftrlog(flogagcd,flogctcd,flogtype,flognewv,floguser) values (agentid,featureDetail.fdtlagid,'C',featVal,userinfo);
+	RAISE NOTICE 'FTRLOG table inserted';
+	RETURN 'Updated';
+	ELSE
+		IF (categoryInfo.ichdrcod != '') THEN
+			INSERT INTO icashobj.ftrmas (fmasagcd,fmasasfs,fmasctcd,fmasname,fmascusr) VALUES 
+				(agentInfo.agesfc,agentInfo.ageccd,categoryInfo.ichdrcod,categoryInfo.ichdrdes,userInfo) 
+					RETURNING fmasagid,fmasagcd INTO featureInfo.fmasagid,featureInfo.fmasagcd;
+			RAISE NOTICE 'FTRMAS inserted';
+			INSERT INTO icashobj.ftrmasl(fmasagcd,fmasasfs,fmasctcd,fmasname,fmascusr,fmasagid,fmascdat,fmasctim,fmasltp,fmaslur) VALUES 
+				(agentInfo.agesfc,agentInfo.ageccd,categoryInfo.ichdrcod,categoryInfo.ichdrdes,userInfo,featureInfo.fmasagid,date1,time1,'C',userInfo);
+			RAISE NOTICE 'FTRMASL Log inserted';
+-- 			FTRMAS AND FTRMASL tables inserted
+
+			INSERT INTO icashobj.ftrdtl(fdtlname,fdtlcapn,fdtlagcd,fdtlmsid) 
+				VALUES(featName,featCap,featureInfo.fmasagcd,featureInfo.fmasagid)
+					RETURNING fdtlagid INTO featureDetail.fdtlagid;
+			RAISE NOTICE 'FTRDTL inserted';
+			INSERT INTO icashobj.ftrdtll(fdtlagid,fdtlname,fdtlcapn,fdtlagcd,fdtlmsid,fdtlcdat,fdtlctime,fdtlltp) 
+				VALUES(featureDetail.fdtlagid,featName,featCap,featureInfo.fmasagcd,featureInfo.fmasagid,date1,time1,'C');
+			RAISE NOTICE 'FTRDTLL LOG inserted';
+-- 			FTRDTL AND FTRDTLL tables inserted
+
+			INSERT INTO icashobj.FTRVAL(fvaldtid,fvaldval,fvalcusr) VALUES (featureDetail.fdtlagid,featVal,userinfo) RETURNING fvalagid INTO featureVal.fvalagid;
+			RAISE NOTICE 'FTRVAL inserted';
+			INSERT INTO icashobj.FTRVALL(fvaldtid,fvaldval,fvalagid,fvalcdat,fvalctim,fvalltp,fvalcusr) 
+			VALUES (featureDetail.fdtlagid,featVal,featureVal.fvalagid,date1,time1,'C',userinfo);
+			RAISE NOTICE 'FTRVALL inserted';
+-- 			FTRVAL AND FTRVALL tables inserted
+
+			INSERT INTO icashobj.ftrlog(flogagcd,flogctcd,flogtype,flognewv,floguser) values (agentid,featureDetail.fdtlagid,'C',featVal,userinfo);
+			RAISE NOTICE 'FTRLOG table inserted';
+			RETURN 'Inserted';
+		ELSE
+			RETURN 'Unable to insert';
+		END IF;
+	END IF;
+END;$BODY$;

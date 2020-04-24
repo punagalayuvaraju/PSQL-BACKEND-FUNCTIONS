@@ -1,0 +1,43 @@
+CREATE OR REPLACE FUNCTION icashobj.specialagentcommissionsharecreation(
+	sendingcountry character varying,
+	sendingcurrency character varying,
+	receivingcountry character varying,
+	receivingcurrency character varying,
+	productcode character varying,
+	grouptype character varying,
+	sendinggroupcode character varying,
+	receivinggroupcode character varying,
+	deliverymode character varying,
+	commissioncurrency character varying,
+	status character varying,
+	sharingstatus character varying,
+	fromamount numeric,
+	toamount numeric,
+	agentsharefixed numeric,
+	mainagentsharefixed numeric,
+	headofficeshare numeric,
+	createddate date,
+	createdtime time without time zone,
+	createduser character varying)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+DECLARE 
+        fromamt numeric;
+BEGIN
+	SELECT csttam INTO fromamt FROM icashobj.iapcst WHERE cstscn=sendingcountry AND cstscc=sendingcurrency AND cstrcn=receivingcountry AND 
+ 			cstrcc=receivingcurrency AND cstpcd=productcode AND cstsgp=sendinggroupcode AND cstgrp=receivinggroupcode AND cstmod=deliverymode 
+ 			AND cststs=sharingstatus AND cstcod=grouptype ORDER BY csttam DESC LIMIT 1 OFFSET 0;
+	if(fromamt is null) then fromamt=0; end if;
+		
+	INSERT INTO icashobj.iapcst (cstscn,cstscc,cstrcn,cstrcc,cstpcd,cstcod,cstsgp,cstgrp,cstmod,cstccr,cststs,cstfam,csttam,cstmas,cstfas,cstsho,cstact,csttid,csttdt,cstttm)
+				 VALUES (sendingcountry,sendingcurrency,receivingcountry,receivingcurrency,productcode,grouptype,sendinggroupcode,receivinggroupcode,
+						deliverymode,commissioncurrency,sharingstatus,fromamt,toamount,agentsharefixed,mainagentsharefixed,headofficeshare,status,createduser,createddate,createdtime);						
+				
+	RETURN 'SUCCESS';
+END
+$BODY$;
+

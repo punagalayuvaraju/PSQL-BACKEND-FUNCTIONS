@@ -1,0 +1,50 @@
+CREATE OR REPLACE FUNCTION icashobj.chargemanagemententry(
+	tiercode character varying,
+	sendingcountrycode character varying,
+	chargeslabcurrency character varying,
+	receivingcountrycode character varying,
+	receivingcurrency character varying,
+	deliverymode numeric,
+	fromamount numeric,
+	toamount numeric,
+	chargeamount numeric,
+	commisiontype character varying,
+	activeinactive character,
+	createddate date,
+	createdtime time without time zone,
+	createduser character varying)
+    RETURNS character
+    LANGUAGE 'plpgsql'
+
+  
+AS $BODY$
+BEGIN
+	IF EXISTS(SELECT * FROM icashobj.ictchg WHERE (CASE WHEN (sendingcountrycode = '') THEN chgrcy=receivingcountrycode ELSE chgscy=sendingcountrycode END) AND
+			  chgtir=tiercode  AND chgmod=deliverymode AND chgtam=toamount) then 
+					RAISE EXCEPTION 'Commision Amount for this Tier Code Already Exists' ;
+						 			 
+	ELSEIF NOT EXISTS(SELECT chgtam FROM icashobj.ictchg WHERE chgtam >= toamount AND chgtir = tiercode AND chgmod=deliverymode AND
+					  (CASE WHEN (sendingcountrycode = '') THEN chgrcy=receivingcountrycode ELSE chgscy=sendingcountrycode END) ORDER BY chgtam DESC LIMIT 1) THEN 
+					
+				IF NOT EXISTS(SELECT chgtam FROM icashobj.ictchg WHERE chgcrg >= chargeamount AND chgtir = tiercode AND chgmod=deliverymode AND
+							  (CASE WHEN (sendingcountrycode = '') THEN chgrcy=receivingcountrycode ELSE chgscy=sendingcountrycode END) ORDER BY chgcrg DESC LIMIT 1) THEN 
+							  
+						SELECT chgtam INTO fromamount FROM icashobj.ictchg WHERE chgtir = tiercode AND chgmod=deliverymode AND
+						(CASE WHEN (sendingcountrycode = '') THEN chgrcy=receivingcountrycode ELSE chgscy=sendingcountrycode END) ORDER BY chgtam DESC LIMIT 1;
+						
+			         	INSERT INTO icashobj.ictchg (chgtir,chgscy,chgrcy,chgmod,chgcrd,chgfam,chgtam,chgcrg,chgtyp,chgdat,chgtim,chguid,chgact) 
+					  					    VALUES (tiercode,sendingcountrycode,receivingcountrycode,deliverymode,
+												   (CASE WHEN (sendingcountrycode = '') THEN receivingcurrency ELSE chargeslabcurrency END),
+												   (CASE WHEN (fromamount IS NULL) THEN 0 ELSE fromamount END),
+													toamount,chargeamount,commisiontype,createddate,createdtime,createduser,activeinactive);
+	
+					   RETURN (CASE WHEN (fromamount IS NULL) THEN 0 ELSE fromamount END);
+				ELSE 
+					   RAISE EXCEPTION 'Charge Amount should be more than the last slab';
+				END IF;
+	ELSE 
+			RAISE EXCEPTION 'To Amount should be more than the last slab';
+	END IF;
+	END;						 
+$BODY$;
+

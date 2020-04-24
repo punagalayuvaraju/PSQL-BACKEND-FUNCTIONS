@@ -1,0 +1,31 @@
+CREATE OR REPLACE FUNCTION icashobj.bulklimtrule(
+	icsndcnt character varying,
+	icsndhoc character varying,
+	icsndagt character varying,
+	amountvalue numeric,
+	icrcvcnt character varying,
+	icrcvhoc character varying,
+	icrcvagt character varying,
+	icrcvmod character varying,
+	icactcod character varying,
+	addeduser character varying)
+    RETURNS SETOF icashobj.icblklmtl 
+    LANGUAGE 'plpgsql'
+
+   
+AS $BODY$
+declare sendCountry character varying;
+     begin
+				   insert into icashobj.icblklmtl(icsndcnt,icsndhoc,icsndagt,icrusdmt,icrcvcnt,icrcvhoc,icrcvagt,icrcvmod,icactcod,icaddusr,icadddat,icaddtim,icrecsts) 
+					  values(icsndcnt,icsndhoc,icsndagt,amountValue,icrcvcnt,icrcvhoc,icrcvagt,icrcvmod,icactcod,addeduser,current_date,current_time,'N') returning  icrusdmt into sendCountry;
+					  
+if(sendCountry<>'')then
+ 
+					  RETURN QUERY
+					  EXECUTE 'Select * from icashobj.icblklmtl';
+					  end if;
+					 
+				
+		 end 
+$BODY$;
+

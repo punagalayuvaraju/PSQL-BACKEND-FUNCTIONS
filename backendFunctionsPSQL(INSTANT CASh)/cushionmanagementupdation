@@ -1,0 +1,43 @@
+CREATE OR REPLACE FUNCTION icashobj.cushionmanagementupdation(
+	sendingcountry character varying,
+	sendingcurrency character varying,
+	sendinggroupcode character varying,
+	receivingcountry character varying,
+	receivingcurrency character varying,
+	receivinggroupcode character varying,
+	commissiongroupcode character varying,
+	receivingbidcushion1 numeric,
+	receivingbidcushion2 numeric,
+	receivingbidcushion3 numeric,
+	sendingoffercushion1 numeric,
+	sendingoffercushion2 numeric,
+	sendingoffercushion3 numeric,
+	tiercode character varying,
+	payingcurrencystatus character,
+	status character,
+	authorisedby character varying,
+	authorisedon date,
+	authorisedat time without time zone)
+    RETURNS character
+    LANGUAGE 'plpgsql'
+
+    
+AS $BODY$
+     begin
+		 if exists(select * from icashobj.ictcuh where cuhscn = sendingcountry AND cuhscc = sendingcurrency AND cuhrcn = receivingcountry AND cuhrcc = receivingcurrency 
+				   AND cuhtir = tiercode AND (CASE WHEN (commissiongroupcode != '') THEN cuhgrp = commissiongroupcode ELSE 
+				   (CASE WHEN (receivinggroupcode != '') THEN cuhgrp = receivinggroupcode ELSE cuhgrp = sendinggroupcode END) END)) then 
+							 
+				update icashobj.ictcuh set cuhbc2 = receivingbidcushion2,cuhbc3 = receivingbidcushion3,cuhoc1 = sendingoffercushion1,cuhoc2 = sendingoffercushion2,
+					   cuhoc3 = sendingoffercushion3,cuhflg = '',cuhaid = '' where cuhscn = sendingcountry AND cuhscc = sendingcurrency AND 
+					   cuhrcn = receivingcountry AND cuhrcc = receivingcurrency AND cuhtir = tiercode AND (CASE WHEN (commissiongroupcode != '') THEN cuhgrp = commissiongroupcode ELSE 
+				   	   (CASE WHEN (receivinggroupcode != '') THEN cuhgrp = receivinggroupcode ELSE cuhgrp = sendinggroupcode END) END);
+							 
+			   delete from icashobj.ictcua where cuascn = sendingcountry AND cuascc = sendingcurrency AND cuarcn = receivingcountry AND cuarcc = receivingcurrency
+						   AND cuatir = tiercode AND (CASE WHEN (receivinggroupcode != '') THEN cuagrp = receivinggroupcode 
+		                   ELSE cuagrp = sendinggroupcode END);
+				 return status;
+		     else raise exception 'Record not Found';			 					 
+		 end if;			 
+	end
+$BODY$;

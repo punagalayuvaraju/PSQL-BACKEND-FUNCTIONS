@@ -1,0 +1,32 @@
+CREATE OR REPLACE FUNCTION icashobj.tiercodeauthorization(
+	tiercode character varying,
+	description character varying,
+	currency character varying,
+	region character varying,
+	status character,
+	actinact character,
+	approveduser character varying,
+	approveddate date,
+	approvedtime time without time zone)
+    RETURNS character
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+BEGIN
+         IF EXISTS (SELECT * FROM icashobj.icttirt WHERE tircodt=tiercode) THEN
+		 	UPDATE icashobj.icttirt set tirappt = status,tirapdt = approveduser, tirapdd = approveddate, tiraddt = approvedtime
+										WHERE tircodt=tiercode RETURNING tirappt INTO status;
+			IF(status = 'Y') THEN
+			  IF NOT EXISTS (SELECT * FROM icashobj.icttir WHERE tircod=tiercode) THEN
+				INSERT INTO icashobj.icttir(tircod,tirdes,tircur,tirreg)
+										VALUES (tiercode,description,currency,region);
+			  END IF;
+			END IF;
+			RETURN status;
+		 ELSE
+		    RAISE EXCEPTION 'Tier Code Not Available';
+		 END IF;
+END
+$BODY$;

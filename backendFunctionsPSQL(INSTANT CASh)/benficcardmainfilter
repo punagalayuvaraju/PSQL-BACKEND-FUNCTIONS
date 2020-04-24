@@ -1,0 +1,47 @@
+CREATE OR REPLACE FUNCTION icashobj.benficcardmainfilter(
+	mobile character varying DEFAULT NULL::character varying,
+	sendnm character varying DEFAULT NULL::character varying,
+	telphone character varying DEFAULT NULL::character varying,
+	idnumb character varying DEFAULT NULL::character varying,
+	idtype character varying DEFAULT NULL::character varying)
+    RETURNS SETOF icashobj.ictgcrview 
+    LANGUAGE 'plpgsql'
+
+   
+AS $BODY$
+DECLARE
+   _where text;
+   _sql   text := 'select * from icashobj.ictgcrview';
+BEGIN
+ if (idnumb<>'' AND idtype<>'') then
+  _where := concat_ws(' AND '
+		, CASE WHEN idnumb   IS NOT NULL THEN 'senderidentificationnumber = $1' END
+        , CASE WHEN idtype   IS NOT NULL THEN 'senderidtype = $2' END
+         ) ; 
+
+   IF _where <> '' THEN
+      _sql := _sql || ' WHERE ' || _where ;
+
+  
+   RETURN QUERY EXECUTE _sql
+   USING idnumb,idtype;
+   END IF;
+   RAISE NOTICE 'sql: %', _sql;
+ else 
+   _where := concat_ws(' OR '
+		, CASE WHEN mobile   IS NOT NULL THEN 'sendermobile = $1' END
+		, CASE WHEN sendnm   IS NOT NULL THEN 'REPLACE(sendername, $4,$5) ilike $2' END
+		, CASE WHEN telphone  IS NOT NULL THEN 'sendertelephone = $3' END
+		 ) ; 
+
+   IF _where <> '' THEN
+      _sql := _sql || ' WHERE ' || _where ;
+
+  
+   RETURN QUERY EXECUTE _sql
+   USING mobile,sendnm,telphone,',','';
+   END IF;
+   RAISE NOTICE 'sql: %', _sql;
+ END IF;
+END
+$BODY$;

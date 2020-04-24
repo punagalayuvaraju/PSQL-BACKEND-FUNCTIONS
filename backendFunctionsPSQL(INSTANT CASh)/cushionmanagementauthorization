@@ -1,0 +1,53 @@
+CREATE OR REPLACE FUNCTION icashobj.cushionmanagementauthorization(
+	sendingcountry character varying,
+	sendingcurrency character varying,
+	sendinggroupcode character varying,
+	receivingcountry character varying,
+	receivingcurrency character varying,
+	receivinggroupcode character varying,
+	receivingbidcushion1 numeric,
+	receivingbidcushion2 numeric,
+	receivingbidcushion3 numeric,
+	sendingoffercushion1 numeric,
+	sendingoffercushion2 numeric,
+	sendingoffercushion3 numeric,
+	tiercode character varying,
+	payingcurrencystatus character,
+	status character,
+	authorisedby character varying,
+	authorisedon date,
+	authorisedat time without time zone)
+    RETURNS character
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+         begin
+		       if not exists (select * from icashobj.ictcuh where cuhscn = sendingcountry AND cuhscc = sendingcurrency AND cuhrcn = receivingcountry
+							 AND (CASE WHEN (sendinggroupcode = '') THEN cuhgrp=receivinggroupcode ELSE cuhgrp=sendinggroupcode END)  
+					         AND cuhrcc = receivingcurrency AND cuhtir = tiercode) then 
+					   
+					   raise exception 'Cushion for this sending/receiving country doent exist';
+					   
+				else
+				if exists(select cuhflg from icashobj.ictcuh where cuhflg='' and cuhscn = sendingcountry AND cuhscc = sendingcurrency AND cuhrcn = receivingcountry AND 
+											  cuhrcc = receivingcurrency AND cuhtir = tiercode AND
+											  (CASE WHEN (sendinggroupcode = '') THEN cuhgrp=receivinggroupcode ELSE cuhgrp=sendinggroupcode END)) then				
+				update icashobj.ictcuh set cuhflg = status,cuhaid = authorisedby,cuhadt = authorisedon,cuhatm = authorisedat where 
+					                          cuhscn = sendingcountry AND cuhscc = sendingcurrency AND cuhrcn = receivingcountry AND 
+											  cuhrcc = receivingcurrency AND cuhtir = tiercode AND
+											  (CASE WHEN (sendinggroupcode = '') THEN cuhgrp=receivinggroupcode ELSE cuhgrp=sendinggroupcode END);
+				 if(status = 'A') then	
+				   insert into icashobj.ictcua (cuascn,cuascc,cuagrp,cuarcn,cuarcc,cuabc1,cuabc2,cuabc3,cuaoc1,cuaoc2,cuaoc3,cuatir,cuafl1) 
+				   values (sendingcountry,sendingcurrency,(CASE WHEN (sendinggroupcode = '') THEN receivinggroupcode ELSE sendinggroupcode END),
+					       receivingcountry,receivingcurrency,receivingbidcushion1,receivingbidcushion2,receivingbidcushion3,sendingoffercushion1,
+						   sendingoffercushion2,sendingoffercushion3,tiercode,payingcurrencystatus);
+					end if;	
+					return status;
+			     else
+						raise exception 'No records found'; 
+			  end if;	
+			end if;	
+		 end;
+$BODY$;

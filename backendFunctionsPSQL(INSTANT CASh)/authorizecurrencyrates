@@ -1,0 +1,31 @@
+CREATE OR REPLACE FUNCTION icashobj.authorizecurrencyrates(
+	currencycode character varying,
+	currencyncode character varying,
+	receivinggroup character varying,
+	reutersbidrate numeric,
+	reutersofferrate numeric,
+	sendinggroup character varying,
+	status character,
+	authorizeduser character varying,
+	authorizeddate date,
+	authorizedtime time without time zone)
+    RETURNS character
+    LANGUAGE 'plpgsql'
+
+   
+AS $BODY$
+declare  recstatus character;
+     begin
+		update icashobj.icrattmp set rttsts = status,rttaus=authorizeduser,rttadt=authorizeddate,rttatm=authorizedtime 
+			where rttcrd=currencycode AND rttgrp=receivinggroup AND rttort= reutersofferrate AND rttsnd = sendinggroup returning rttsts into recstatus;
+				if(recstatus = 'Y')then
+				   insert into icashobj.icratmasa(ratcrd,ratncd,ratgrp,ratbrt,ratort,ratsnd,ratact,rataus,ratadt,ratatm) 
+					values(currencycode,currencyNcode,receivinggroup,reutersbidrate,reutersofferrate,sendinggroup,status,authorizeduser,authorizeddate,authorizedtime);
+					
+					insert into icashobj.icratmas(ratcrd,ratncd,ratgrp,ratbrt,ratort,ratsnd,ratact,rataus,ratadt,ratatm)
+					 values(currencycode,currencyNcode,receivinggroup,reutersbidrate,reutersofferrate,sendinggroup,status,authorizeduser,authorizeddate,authorizedtime);
+				end if;	   
+				return status;
+		 end 
+$BODY$;
+

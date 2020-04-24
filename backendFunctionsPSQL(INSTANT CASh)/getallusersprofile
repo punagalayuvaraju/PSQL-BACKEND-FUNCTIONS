@@ -1,0 +1,12 @@
+CREATE OR REPLACE FUNCTION icashobj.getallusersprofile(
+	)
+    RETURNS SETOF icashobj.ictusrl 
+    LANGUAGE 'plpgsql'
+
+
+AS $BODY$
+ BEGIN
+ RETURN QUERY
+   EXECUTE 'select * from icashobj.ictusrl ORDER BY LOGDTE DESC LIMIT 15';
+ END
+ $BODY$;

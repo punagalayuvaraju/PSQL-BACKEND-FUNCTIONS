@@ -1,0 +1,30 @@
+CREATE OR REPLACE FUNCTION icashobj.extendedfeatures(
+	aefudid1 integer,
+	aefuddes1 character varying,
+	aefudcdt1 date,
+	aefudswd1 character varying,
+	aefagecd1 character varying,
+	aefcattp1 character varying,
+	aefcatnm1 character varying,
+	aefftrnm1 character varying,
+	aefuftrc1 character varying,
+	aefufval1 character varying)
+    RETURNS text
+    LANGUAGE 'plpgsql'
+
+   
+AS $BODY$
+declare
+	total text;
+begin
+	select aefagecd into total from icashobj.aefupld WHERE aefagecd = aefagecd1 AND aefcatnm = aefcatnm1 AND aefftrnm = aefftrnm1;
+	raise notice '%',total;
+	IF (total!='') THEN
+		return 'Not inserted';
+	ELSE
+		INSERT INTO icashobj.aefupld (aefudid,aefuddes,aefudcdt,aefudswd,aefagecd,aefcattp,aefcatnm,aefftrnm,aefuftrc,aefextf1,aefufval) 
+		values(aefudid1,aefuddes1,aefudcdt1,aefudswd1,aefagecd1,aefcattp1,aefcatnm1,aefftrnm1,aefuftrc1,'N',aefufval1);
+		return 'Inserted';
+	END IF;
+end;$BODY$;
+

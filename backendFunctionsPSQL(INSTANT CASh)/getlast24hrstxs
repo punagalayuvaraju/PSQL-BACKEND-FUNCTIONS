@@ -1,0 +1,25 @@
+CREATE OR REPLACE FUNCTION icashobj.getlast24hrstxs(
+	subfranch character varying,
+	status character varying,
+	ictcno character varying)
+    RETURNS SETOF icashobj.getlast24hrstxs 
+    LANGUAGE 'plpgsql'
+
+    
+AS $BODY$ 
+begin 
+IF(subfranch <> '' AND ictcno <> '' and status = '' ) THEN 
+ RETURN QUERY   SELECT a.*,b.moddes,c.cntnme,d.extec1,d.extef2,d.extef3,d.extspr, d.extec2,d.extsen, d.extsct,d.extspr,d.extrct,d.exten1,d.exten2,d.exten3,d.extsed,d.extsof,d.extsbd,e.agelnm,f.benfrmo,f.benfnsl,f.benrlt,f.benfdob,f.benfdtl,f.benfidt,g.cntnme,h.gcrbrc,i.nbrcdl,j.idtdtl FROM icashobj.icttrml a inner join icashobj.ictmod b on a.trmsmd = b.modcod::character varying inner join icashobj.ictcnt c on a.trmrcc = c.cntccd::numeric inner join icashobj.ictext d on a.trmicn= d.exticn inner join icashobj.ictage e on a.trmrag=e.agesfc inner join icashobj.ictbenfl f on f.benfbno=a.trmicd join icashobj.ictcnt g on a.trmscc =g.cntccd::numeric INNER JOIN icashobj.ictgcrl h on  f.benfbno=h.gcrino inner JOIN wcard.clcnbr i on  d.extec1::numeric=i.nbrcno
+ inner JOIN icashobj.ictidt j ON  f.benfidt=j.idttyp where a.trmicn=ictcno::numeric;
+ else IF(subfranch <> '' AND ictcno = '' ) THEN 
+ RETURN QUERY
+ 
+ SELECT a.*,b.moddes,c.cntnme,d.extec1,d.extef2,d.extef3,d.extspr, d.extec2,d.extsen,d.extsct,d.extspr,d.extrct,d.exten1,d.exten2,d.exten3,d.extsed,d.extsof,d.extsbd,e.agelnm,f.benfrmo,f.benfnsl,f.benrlt,f.benfdob,f.benfdtl,f.benfidt,g.cntnme,h.gcrbrc,i.nbrcdl,j.idtdtl FROM icashobj.icttrml a inner join icashobj.ictmod b on a.trmsmd = b.modcod::character varying inner join icashobj.ictcnt c on a.trmrcc = c.cntccd::numeric inner join icashobj.ictext d on a.trmicn= d.exticn inner join icashobj.ictage e on a.trmrag=e.agesfc inner join icashobj.ictbenfl f on f.benfbno=a.trmicd  join icashobj.ictcnt g on a.trmscc =g.cntccd::numeric  INNER JOIN icashobj.ictgcrl h on  f.benfbno=h.gcrino inner JOIN wcard.clcnbr i on  d.extec1::numeric=i.nbrcno 
+ inner JOIN icashobj.ictidt j ON  f.benfidt=j.idttyp where a.trmsag=subfranch::NUMERIC AND a.trmpst=status and  a.trmsdt  >= NOW() - INTERVAL '24 HOURS'
+ORDER BY  a.trmsdt DESC;
+ELSE RETURN QUERY   SELECT a.*,b.moddes,c.cntnme,d.extec1,d.extef2,d.extef3,d.extspr, d.extec2,d.extsen, d.extsct,d.extspr,d.extrct,d.exten1,d.exten2,d.exten3,d.extsed,d.extsof,d.extsbd,e.agelnm,f.benfrmo,f.benfnsl,f.benrlt,f.benfdob,f.benfdtl,f.benfidt,g.cntnme,h.gcrbrc,i.nbrcdl,j.idtdtl FROM icashobj.icttrml a inner join icashobj.ictmod b on a.trmsmd = b.modcod::character varying inner join icashobj.ictcnt c on a.trmrcc = c.cntccd::numeric inner join icashobj.ictext d on a.trmicn= d.exticn inner join icashobj.ictage e on a.trmrag=e.agesfc inner join icashobj.ictbenfl f on f.benfbno=a.trmicd join icashobj.ictcnt g on a.trmscc =g.cntccd::numeric INNER JOIN icashobj.ictgcrl h on  f.benfbno=h.gcrino inner  JOIN wcard.clcnbr i on  d.extec1::numeric=i.nbrcno
+inner JOIN icashobj.ictidt j ON  f.benfidt=j.idttyp where a.trmicn=ictcno::numeric and a.trmpst=status;
+END IF;
+end if;
+end
+$BODY$;

@@ -1,0 +1,12 @@
+CREATE OR REPLACE FUNCTION icashobj.getallictage(
+	)
+    RETURNS SETOF icashobj.ictage 
+    LANGUAGE 'plpgsql'
+
+  
+AS $BODY$
+BEGIN
+RETURN QUERY
+   EXECUTE 'select * from icashobj.ictage';
+   end
+$BODY$;

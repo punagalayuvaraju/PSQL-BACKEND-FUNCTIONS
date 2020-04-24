@@ -1,0 +1,42 @@
+CREATE OR REPLACE FUNCTION icashobj.insertcountry(
+	countrycode character varying,
+	countryname character varying,
+	swiftcode character varying,
+	currency character varying,
+	countrytype character,
+	maxsendingamount numeric,
+	maxreceivingamount numeric,
+	countrygroup character varying)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+DECLARE 
+countryswiftcode character varying;
+cnttype character varying;
+BEGIN 
+	IF NOT EXISTS (SELECT * FROM icashobj.ictcnt WHERE cntscd = swiftcode AND cntnme != countryname) THEN
+	SELECT cntscd,cnttts into countryswiftcode,cnttype FROM icashobj.ictcnt WHERE cntnme=countryname LIMIT 1;
+		IF (countryswiftcode IS NULL OR countryswiftcode=swiftcode) THEN
+		    IF (cnttype IS NULL OR cnttype=countrytype) THEN
+				IF NOT EXISTS(SELECT * FROM icashobj.ictcnt where cntnme=countryname AND cntlcr=currency) THEN
+					INSERT INTO icashobj.ictcnt (cntccd,cntnme,cntlcr,cnttts,cntscd,cntamu,cntam2,cntgrc) 
+				       VALUES (countrycode,countryname,currency,countrytype,swiftcode,maxsendingamount,maxreceivingamount,countrygroup) ; 
+			    	RETURN 'Country Added Successfully';
+				ELSE 
+					RAISE EXCEPTION 'Country with Same Currency Already Exists';
+				END IF;
+			ELSE 
+				RAISE EXCEPTION 'Country with Multiple Types are not Allowed';
+			END IF;
+		ELSE
+			RAISE EXCEPTION 'Country with multiple Swift Code is not Allowed';
+		END IF;		
+	ELSE
+		RAISE EXCEPTION 'Swift Code Already Exists';
+	END IF;
+END
+$BODY$;
+

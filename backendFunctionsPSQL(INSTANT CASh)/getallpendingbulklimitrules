@@ -1,0 +1,15 @@
+CREATE OR REPLACE FUNCTION icashobj.getallpendingbulklimitrules(
+	)
+    RETURNS SETOF icashobj.icblklmtl 
+    LANGUAGE 'plpgsql'
+
+   
+AS $BODY$
+DECLARE _select text :='Select * from icashobj.icblklmtl';
+BEGIN 
+RETURN QUERY
+EXECUTE _select ;
+   RAISE NOTICE 'sql: %', _select;
+
+END;
+$BODY$;

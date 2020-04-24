@@ -1,0 +1,55 @@
+CREATE OR REPLACE FUNCTION icashobj.user_create(
+	usrttu text DEFAULT ''::text,
+	usrnam text DEFAULT ''::text,
+	usrsts text DEFAULT ''::text,
+	usracr text DEFAULT ''::text,
+	usrstt text DEFAULT ''::text,
+	usrrfl numeric DEFAULT 0,
+	usrstd numeric DEFAULT 0,
+	usrlng text DEFAULT ''::text,
+	usrmno text DEFAULT ''::text,
+	usrflr1 text DEFAULT ''::text,
+	usrflr2 text DEFAULT ''::text,
+	usrflr3 text DEFAULT ''::text,
+	usreml text DEFAULT ''::text,
+	usrrsn text DEFAULT ''::text,
+	usrsfc numeric DEFAULT 0,
+	usrfrc numeric DEFAULT 0,
+	usrsbc numeric DEFAULT 0,
+	usrccd numeric DEFAULT 0,
+	logusr text DEFAULT ''::text,
+	logdte date DEFAULT (
+	'now'::text)::date,
+	logtme time without time zone DEFAULT (
+	'now'::text)::time without time zone)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+declare countrycode character varying;
+         uniquecode character varying;
+		 cntcode  character varying;
+		 cntnum  character varying;
+		 userid  character varying;
+    BEGIN
+	if exists(select ageswd  from icashobj.ictage where agesfc=usrsbc) then
+	select ageswd into countrycode  from icashobj.ictage where agesfc=usrsbc limit 1;
+	
+	select cntccd,cntscd into cntnum,cntcode from icashobj.ictcnt where cntscd=countrycode limit 1;
+	SELECT COUNT(*)+1 INTO uniquecode FROM icashobj.ictusrl ;
+	
+		SELECT lpad(uniquecode::text,4,'0') INTO uniquecode;
+		 userid=concat(cntcode,cntnum,uniquecode);
+		
+	INSERT INTO icashobj.ictusrl (usridc,usrttu,usrsfc, usrfrc, usrsbc,usrnam,usrsts,usracr,usrstt,usrrfl,usrstd,usrlng,usrmno,usrflr1,
+								  usrflr2,usrflr3,usreml,usrrsn,usrccd,logusr,usrps1,usrps2,usrps3,usrps4,logtyp,logdte,logtme,usratl) 
+	VALUES (userid,usrttu,usrsfc, usrfrc, usrsbc,usrnam,usrsts,usracr,usrstt,usrrfl,usrstd,usrlng,usrmno,usrflr1,usrflr2,usrflr3,usreml,usrrsn,
+			usrccd,logusr,'','','','','C',logdte,logtme,'N');
+				RETURN 'success';
+				else return 'faild';
+				end if;
+	END
+ $BODY$;
+

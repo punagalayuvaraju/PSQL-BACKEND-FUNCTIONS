@@ -1,0 +1,56 @@
+CREATE OR REPLACE FUNCTION icashobj.userbulkinsert(
+	usrttu text DEFAULT ''::text,
+	usrsfc numeric DEFAULT 0,
+	usrfrc numeric DEFAULT 0,
+	usrsbc numeric DEFAULT 0,
+	usrnam text DEFAULT ''::text,
+	usracr text DEFAULT ''::text,
+	usrstt text DEFAULT ''::text,
+	usrsts text DEFAULT ''::text,
+	usrrfl numeric DEFAULT 0,
+	usrstd numeric DEFAULT 0,
+	usrlng text DEFAULT ''::text,
+	usrmno text DEFAULT ''::text,
+	usrflr1 text DEFAULT ''::text,
+	usrflr2 text DEFAULT ''::text,
+	usrflr3 text DEFAULT ''::text,
+	usreml text DEFAULT ''::text,
+	usrrsn text DEFAULT ''::text,
+	logusr text DEFAULT ''::text)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+declare countrycode character varying;
+         uniquecode character varying;
+		 cntcode  character varying;
+		 cntnum  character varying;
+		 userid  character varying;
+		 USERSS   character varying;
+    BEGIN
+	if exists(select ageswd  from icashobj.ictage where ageshc=usrsbc) then
+	select ageswd into countrycode  from icashobj.ictage where ageshc=usrsbc limit 1;
+	
+	select cntccd,cntscd into cntnum,cntcode from icashobj.ictcnt where cntscd=countrycode limit 1;
+	SELECT COUNT(*)+1 INTO uniquecode FROM icashobj.ictusrl ;
+	
+		SELECT lpad(uniquecode::text,4,'0') INTO uniquecode;
+		 userid=concat(cntcode,cntnum,uniquecode);
+		 insert into icashobj.ictusrl (usrttu ,usrsfc ,usrfrc ,usrsbc ,usrnam ,usracr ,usrstt ,usrsts ,usrrfl ,usrstd ,usrlng ,usrmno ,usrflr1,usrflr2,usrflr3,
+usreml ,
+usrrsn,usridc,usrflr7,logtyp,logusr,usratl )values(upper(usrttu) ,usrsfc ,usrfrc ,usrsbc ,usrnam ,upper(usracr) ,upper(usrstt) ,upper(usrsts) ,usrrfl ,usrstd ,upper(usrlng) ,usrmno ,
+upper(usrflr1),
+upper(usrflr2),
+upper(usrflr3),
+usreml ,
+usrrsn,userid,'B','C',logusr,'N' ) RETURNING 
+userid INTO USERSS;
+
+                	else 	RAISE EXCEPTION 'FAILED';
+			
+				end if;
+				RETURN USERSS;
+	END
+ $BODY$;

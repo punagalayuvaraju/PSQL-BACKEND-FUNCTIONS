@@ -1,0 +1,66 @@
+CREATE OR REPLACE FUNCTION icashobj.icmainupdate(
+	remitterfname character varying,
+	remittermname character varying,
+	remitterlname character varying,
+	remitteraddress1 character varying,
+	remitteraddress2 character varying,
+	remittercity character varying,
+	remitternationality numeric,
+	remittermobile character varying,
+	remittertel character varying,
+	remitterresidence character varying,
+	remittergender character varying,
+	remittercompany character varying,
+	occupation character varying,
+	relationship character varying,
+	beneffname character varying,
+	benefmname character varying,
+	beneflname character varying,
+	benefaddress1 character varying,
+	benefaddress2 character varying,
+	benefmobile character varying,
+	beneftele character varying,
+	benefcity character varying,
+	remitteridexpd date,
+	remittercusdob date,
+	recordid character varying)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+  declare 
+  resultStatus character varying;
+  resultStatus1 character varying;
+  sendersName character varying;
+  recieveName character varying;
+  begin
+  sendersName := concat_ws(',',remitterfname,remittermname,remitterlname);
+  recieveName := concat_ws(',',beneffname,benefmname,beneflname);
+
+  update icashobj.ictgcr set gcrsnm=sendersName,gcrrnm=recieveName,gcrrestyp=remitterResidence,gcrsd1=remitterAddress1,gcrsd2=remitterAddress2,gcrstl=remitterTel,gcrbrc=remitterGender,gcrrd1=benefaddress1,
+  gcrrd2=benefaddress2,gcrrtl=benefTele,gcrnsl=remitterNationality,gcrmno=remitterMobile,gcrrmo=benefmobile,gcrsdb=remittercusdob::date,gcrsfn=remitterfname,
+  gcrsmn=remittermname,gcrsln=remitterlname,gcrrfn=beneffname,gcrrmn=benefmname,gcrrln=beneflname,gcrspr=occupation,gcrrie=remitteridexpd::date,gcrcmpname=remitterCompany,
+  gcrelben=relationship,gcrsd3=remitterCity,gcrrd3=benefcity where gcrino=recordId returning gcrsd1 into resultStatus;
+  
+  if (resultStatus <> '') then
+  update icashobj.ictgcrl set gcrsnm=sendersName,gcrrnm=recieveName,gcrrestyp=remitterResidence,gcrsd1=remitterAddress1,gcrsd2=remitterAddress2,gcrstl=remitterTel,gcrbrc=remitterGender,gcrrd1=benefaddress1,
+  gcrrd2=benefaddress2,gcrrtl=benefTele,gcrnsl=remitterNationality,gcrmno=remitterMobile,gcrrmo=benefmobile,gcrsdb=remittercusdob::date,gcrsfn=remitterfname,
+  gcrsmn=remittermname,gcrsln=remitterlname,gcrrfn=beneffname,gcrrmn=benefmname,gcrrln=beneflname,gcrspr=occupation,gcrvisaex=remitteridexpd::date,gcrcmpname=remitterCompany,
+  gcrelben=relationship,gcrsd3=remitterCity,gcrrd3=benefcity where gcrino=recordId returning gcrsd1 into resultStatus1;
+  
+  if (resultStatus1 <> '') then
+  return 'success';
+  else 
+  return 'failed';
+  END if;
+
+  else 
+  return 'failed';
+  END if;
+
+  end
+  
+  $BODY$;
+

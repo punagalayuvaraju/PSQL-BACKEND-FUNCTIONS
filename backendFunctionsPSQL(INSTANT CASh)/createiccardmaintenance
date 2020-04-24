@@ -1,0 +1,77 @@
+CREATE OR REPLACE FUNCTION icashobj.createiccardmaintenance(
+	descountry character varying,
+	statecode character varying,
+	currency character varying,
+	agentdetails character varying,
+	agentcode character varying,
+	remitterfname character varying,
+	remittermname character varying,
+	remitterlname character varying,
+	remitteraddress1 character varying,
+	remitteraddress2 character varying,
+	remittercity character varying,
+	remitternationality numeric,
+	remittermobile character varying,
+	remittertel character varying,
+	remitterresidence character varying,
+	remittergender character varying,
+	remitteridtype character varying,
+	remitteridnumb character varying,
+	remittercompany character varying,
+	occupation character varying,
+	relationship character varying,
+	beneffname character varying,
+	benefmname character varying,
+	beneflname character varying,
+	benefaddress1 character varying,
+	benefaddress2 character varying,
+	benefmobile character varying,
+	beneftele character varying,
+	benefcity character varying,
+	benefidtype character varying,
+	benefidnumber character varying,
+	delmode character varying,
+	createdagentcode numeric,
+	createduserid character varying,
+	bankname character varying,
+	bankacc character varying,
+	bankaddress character varying,
+	remitteridexpd date,
+	remittercusdob date)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+declare 
+resultStatus character varying;
+benuniqueid character varying;
+uniquecode character varying;
+sendersName character varying;
+recieveName character varying;
+BEGIN
+SELECT COUNT(*)+1 INTO uniquecode FROM icashobj.ictgcrl ;
+SELECT lpad(uniquecode::text,8,'0') INTO benuniqueid;
+sendersName := concat_ws(',',remitterfname,remittermname,remitterlname);
+recieveName := concat_ws(',',beneffname,benefmname,beneflname);
+
+insert into icashobj.ictgcr(gcrino,gcrcac,gcrsnm,gcrsd1,gcrsd2,gcrstl,gcrrnm,gcrrd1,gcrrd2,gcrrtl,gcridn,gcrcui,gcrcdt,gcrctm,gcridt,gcrdtl,gcrnsl,gcrmno,gcrrmo,gcrsdb,
+							 gcrsfn,gcrsmn,gcrsln,gcrrfn,gcrrmn,gcrrln,gcrspr,gcrbidt,gcrrie,gcrcmpname,gcrelben,gcrsd3,gcrrd3,gcrbnm,gcrbac,gcrba1,gcrbrc,gcrrestyp)
+values (benuniqueid,createdAgentCode::numeric,sendersName,remitterAddress1,remitterAddress2,remitterTel,recieveName,benefaddress1,benefaddress2,benefTele,benefidNumber,createdUserID,
+		current_date,current_timestamp,remitterIdtype,remitterIdnumb,remitterNationality::numeric,remitterMobile,benefmobile,remitterCusdob::date,remitterfname,remittermname,remitterlname,
+		beneffname,benefmname,beneflname,occupation,benefidType, remitterIdexpd::date,remitterCompany,relationship,remitterCity,benefcity,bankName,bankAcc,bankAddress,remitterGender,remitterResidence);
+
+insert into icashobj.ictgcrl(gcrrtp,gcrino,gcrcac,gcrsnm,gcrsd1,gcrsd2,gcrstl,gcrrnm,gcrrd1,gcrrd2,gcrrtl,gcridn,gcrcui,gcrcdt,gcrctm,gcridt,gcrdtl,gcrnsl,gcrmno,gcrrmo,gcrsdb,
+							 gcrsfn,gcrsmn,gcrsln,gcrrfn,gcrrmn,gcrrln,gcrspr,gcrbidt,gcrvisaex,gcrcmpname,gcrelben,gcrsd3,gcrrd3,gcrbnm,gcrbac,gcrba1,gcrbrc,gcrrestyp)
+values ('N',benuniqueid,createdAgentCode::numeric,sendersName,remitterAddress1,remitterAddress2,remitterTel,recieveName,benefaddress1,benefaddress2,benefTele,benefidNumber,createdUserID,
+		current_date,current_timestamp,remitterIdtype,remitterIdnumb,remitterNationality::numeric,remitterMobile,benefmobile,remitterCusdob::date,remitterfname,remittermname,remitterlname,
+		beneffname,benefmname,beneflname,occupation,benefidType,remitterIdexpd::date,remitterCompany,relationship,remitterCity,benefcity,bankName,bankAcc,bankAddress,remitterGender,remitterResidence) returning gcrsnm into resultStatus;
+		if (resultStatus <> '') then 
+		return 'success' ;
+		else 
+		return 'failed' ;
+		END if;
+END
+
+$BODY$;

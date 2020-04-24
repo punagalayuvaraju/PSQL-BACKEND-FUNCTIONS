@@ -1,0 +1,52 @@
+CREATE OR REPLACE FUNCTION icashobj.agentsearch(
+	solefranch numeric DEFAULT NULL::numeric,
+	franch numeric DEFAULT NULL::numeric,
+	subfranch numeric DEFAULT NULL::numeric,
+	agehcd numeric DEFAULT NULL::numeric,
+	agecnt numeric DEFAULT NULL::numeric,
+	ageccd numeric DEFAULT NULL::numeric,
+	agelnm text DEFAULT NULL::text,
+	agead1 text DEFAULT NULL::text)
+    RETURNS SETOF icashobj.agentsearchdata 
+    LANGUAGE 'plpgsql'
+
+    
+AS $BODY$
+DECLARE
+   _where text;
+   _sql   text := 'SELECT
+	a.agescd,a.agefcd,a.agesfc,a.ageccd,a.agesnm,a.agelnm,a.agebrn,a.agead1,a.agead2,a.agead3,a.ageapa,a.ageaca,a.ageapu,
+	a.ageacu,a.agetll,a.agetrl,a.agesam,a.ageram,a.agelus,a.agetlu,a.agetru,a.agesau,a.agerau,a.ageluu,a.agelcd,a.agebnk,
+	a.agescm,a.agercm,a.agewic,a.agerca,a.ageph1,a.agefx1,a.ageema,a.agewhr,a.agetmz,a.ageusr,a.agedte,a.agetme,a.agedev,
+	a.agebpa,a.agebca,a.ageswc,a.agestc,a.agemod,a.agecd1,a.agecd2,a.agecd3,a.agezpc,a.ageswd,a.agecd4,a.agechg,a.agest1,
+	a.agest2,a.agest3,a.agedft,a.agettc,a.agecd5,a.agecd6,a.agecd7,a.agecd8,a.agesv1,a.agesv2,a.agesv3,a.agesv4,a.agerv1,
+	a.agerv2,a.agerv3,a.agerv4,a.agewtm,a.agewt1,a.agewt2,a.agewt3,a.agewt4,a.agewt5,a.agewt6,a.agecd9,a.agecd10,a.agectcd,
+	a.agecds,a.agecnt,a.agecty,
+   b.cntnme,c.sttnam,d.ctynme,e.moddes from icashobj.ictage a  
+   INNER JOIN icashobj.ictcnt b ON b.cntccd = a.agecnt
+   INNER JOIN icashobj.ictstt c ON a.agestc = c.sttcod
+   INNER JOIN icashobj.ictcty d ON a.agecty = d.ctyctc
+   INNER JOIN icashobj.ictmod e ON a.agemod::numeric = e.modcod
+   ';
+BEGIN
+   _where := concat_ws(' and '
+		, CASE WHEN solefranch   IS NOT NULL THEN 'agescd =$1' END
+	   , CASE WHEN franch   IS NOT NULL THEN 'agefcd=$2' END
+		, CASE WHEN subfranch   IS NOT NULL THEN 'agesfc = $3' END
+		, CASE WHEN agehcd   IS NOT NULL THEN 'agehcd = $4' END
+		, CASE WHEN agecnt   IS NOT NULL THEN 'agecnt = $5' END
+       , CASE WHEN ageccd   IS NOT NULL THEN 'ageccd = $6' END
+       , CASE WHEN agelnm   IS NOT NULL THEN 'REPLACE(agelnm,$9,$10) ilike $7' END
+	   , CASE WHEN agead1   IS NOT NULL THEN 'REPLACE(agead1,$9,$10) ilike $8' END
+		
+   ) ;                       
+
+   IF _where <> '' THEN
+      _sql := _sql || ' WHERE ' || _where ;
+
+   RETURN QUERY
+   EXECUTE _sql
+   USING solefranch,franch,subfranch,agehcd,agecnt,ageccd,agelnm,agead1,',','';   END IF;
+   RAISE NOTICE 'sql: %', _sql;
+END
+$BODY$;

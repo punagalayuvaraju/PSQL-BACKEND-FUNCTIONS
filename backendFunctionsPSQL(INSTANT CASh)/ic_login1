@@ -1,0 +1,28 @@
+CREATE OR REPLACE FUNCTION icashobj.ic_login1(
+	username character varying,
+	usrpass character varying)
+    RETURNS SETOF icashobj.logedininfo 
+    LANGUAGE 'plpgsql'
+
+ 
+AS $BODY$
+DECLARE
+   user_email      character varying;
+   ipaddress       text :='select inet_client_addr()';
+   ip              inet;
+BEGIN
+     --checking user name and passwords are exists in database or not
+            select encidc into user_email from icashobj.pasenct where encidc=username AND encpw1=usrpass;
+    -- getting logindevice  ip address		   
+	       EXECUTE ipaddress into ip;
+		  
+	       IF(user_email <>'') THEN 
+	
+	       insert into icashobj.ictloh(usridc,usripa,usrfl1) values(user_email,host(ip),'S');
+	
+	RETURN QUERY  select a.saglnm, b.caglnm,  c.usridc,c.usrsts,c.usrnam,c.usrsfc,c.usrsbc,c.usrfrc ,c.usrttu,c.usrlud,c.usrstd, d.agelnm,d.agecd1,d.agecd2,d.agecnt,d.agefx1,d.agead1,d.agead2,d.agead3,d.ageema, e.cntlcr,e.cntscd,f.cnttts,f.cntnme from icashobj.ictusr c inner join icashobj.ictsag a on c.usrsfc=a.sagcde  inner join icashobj.ictcag b on c.usrfrc=b.cagcde inner join  icashobj.ictage d on c.usrsbc = d.AGESFC inner join icashobj.ictcnt e on e.cntccd = d.agecnt inner join icashobj.ictcnt f on f.cntccd=d.agecnt where c.usridc=username;
+	ELSE 
+  insert into icashobj.ictloh(usridc,usripa,usrfl1) values(username,host(ip),'F');
+	END IF;
+   END;
+$BODY$;

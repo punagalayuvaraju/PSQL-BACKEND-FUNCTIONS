@@ -1,0 +1,32 @@
+CREATE OR REPLACE FUNCTION icashobj.agentlistfiltersearch(
+	city character varying DEFAULT NULL::character varying,
+	cntry character varying DEFAULT NULL::character varying,
+	locat character varying DEFAULT NULL::character varying,
+	agentmode character varying DEFAULT NULL::character varying,
+	agentstate character varying DEFAULT NULL::character varying)
+    RETURNS SETOF icashobj.ictage 
+    LANGUAGE 'plpgsql'
+
+  
+AS $BODY$
+DECLARE
+   _where text;
+   _sql   text := 'SELECT * from icashobj.ictage';
+BEGIN
+   _where := concat_ws(' AND '
+		, CASE WHEN city   IS NOT NULL THEN 'agecty =$1' END
+	   , CASE WHEN cntry   IS NOT NULL THEN 'agecnt=$2' END
+		, CASE WHEN locat   IS NOT NULL THEN 'REPLACE(agelnm,$6,$7)ilike $3' END
+		, CASE WHEN agentmode   IS NOT NULL THEN 'agemod = $4' END
+		, CASE WHEN agentstate   IS NOT NULL THEN 'agestc = $5' END
+         ) ;   
+
+   IF _where <> '' THEN
+      _sql := _sql || ' WHERE ' || _where ;
+
+  
+   RETURN QUERY EXECUTE _sql
+   USING city,cntry,locat,agentmode,agentstate,',','';END IF;
+   RAISE NOTICE 'sql: %', _sql;
+END
+$BODY$;

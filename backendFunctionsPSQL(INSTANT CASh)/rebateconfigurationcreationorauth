@@ -1,0 +1,76 @@
+CREATE OR REPLACE FUNCTION icashobj.rebateconfigurationcreationorauth(
+	sendingcountryswftcode character varying,
+	sendingagentheadoffice character varying,
+	bankcode character varying,
+	rebateamount numeric,
+	allowdenyrebate character,
+	status character,
+	createduser character varying,
+	createddate date,
+	createdtime time without time zone,
+	authorizeduser character varying,
+	authorizeddate date,
+	authorizedtime time without time zone)
+    RETURNS character
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+declare
+         agentcode character varying;
+         bankname character varying;
+
+BEGIN
+        if(status = 'A' OR status = 'R') then
+               update icashobj.cremcont set cnrbtauf = status,cnautusr = authorizeduser,cnautdat = authorizeddate,cnauttim = authorizedtime
+               where cnscswcd = sendingcountryswftcode AND cnsahocd = sendingagentheadoffice AND cnsnmode = bankcode AND cnsrbtam = rebateamount AND cnrbtalf = allowdenyrebate;
+ 
+				insert into icashobj.cremcon (cnscswcd,cnsahocd,cnsnmode,cnsrbtam,cnrbtalf,cnrbtauf,cncrtusr,cncrtdat,cncrttim,cnmodusr,cnmoddat,cnmodtim)
+  				values (sendingcountryswftcode,sendingagentheadoffice,bankcode,rebateamount,allowdenyrebate,status,
+  				createduser,createddate,createdtime,authorizeduser,authorizeddate,authorizedtime);
+				
+				return status;
+
+		elseif(sendingagentheadoffice = 'ALL' AND bankcode = 'ALL') then
+          		insert into icashobj.cremcont(cnscswcd,cnsahocd,cnsrbtam,cnsnmode,cnrbtalf,cncrtusr,cncrtdat,cncrttim) values
+ 				(sendingcountryswftcode,sendingagentheadoffice,rebateamount,bankcode,allowdenyrebate,createduser,createddate,createdtime);  
+     			
+				return status;
+ 
+ 		 elseif(sendingagentheadoffice = 'ALL' AND bankcode !='ALL') then   			
+				if exists(select bnkcod into bankcode from icashobj.ictbnk where bnkcod=bankcode) then
+        					insert into icashobj.cremcont(cnscswcd,cnsahocd,cnsrbtam,cnsnmode,cnrbtalf,cncrtusr,cncrtdat,cncrttim) values
+    					 	(sendingcountryswftcode,sendingagentheadoffice,bankcode,rebateamount,allowdenyrebate,createduser,createddate,createdtime);
+  							
+							return status;
+    			 else raise exception 'Bankcode does not exist';
+			   end if;
+			   
+			elseif(sendingagentheadoffice !='ALL' AND bankcode ='ALL') then
+   				 if exists(select agehcd into agentcode from icashobj.ictage where agehcd = sendingagentheadoffice) then
+            		 insert into icashobj.cremcont(cnscswcd,cnsahocd,cnsrbtam,cnsnmode,cnrbtalf,cncrtusr,cncrtdat,cncrttim) values
+        			 (sendingcountryswftcode,sendingagentheadoffice,bankcode,rebateamount,allowdenyrebate,createduser,createddate,createdtime);
+  					
+					  return status;
+    			  else raise exception 'Headoffice code not exists';
+  				 end if;
+				 
+			elseif(sendingagentheadoffice!='ALL' AND bankcode!='ALL') then
+      			 if exists(select agehcd into agentcode from icashobj.ictage where agehcd = sendingagentheadoffice) then
+          				 if exists(Select bnkcod into bankcode from icashobj.ictbnk where bnkcod=bankcode) then
+             					 insert into icashobj.cremcont(cnscswcd,cnsahocd,cnsrbtam,cnsnmode,cnrbtalf,cncrtusr,cncrtdat,cncrttim) values
+         						 (sendingcountryswftcode,sendingagentheadoffice,bankcode,rebateamount,allowdenyrebate,createduser,createddate,createdtime);
+ 								
+								  return status;
+          				  else raise exception 'Bank code/headoffice code is not found';
+                         end if;
+						 
+                      end if;
+					  
+ 			 else raise exception 'not matched';
+ 		end if;
+
+END
+$BODY$;
+

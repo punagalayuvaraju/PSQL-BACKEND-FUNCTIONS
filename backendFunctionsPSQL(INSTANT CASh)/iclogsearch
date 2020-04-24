@@ -1,0 +1,34 @@
+
+CREATE OR REPLACE FUNCTION icashobj.iclogsearch(
+	fromdate date,
+	todate date,
+	solefranch numeric DEFAULT NULL::numeric,
+	franchise numeric DEFAULT NULL::numeric,
+	subfranch numeric DEFAULT NULL::numeric,
+	userid text DEFAULT NULL::text)
+    RETURNS SETOF icashobj.ictusrl 
+    LANGUAGE 'plpgsql'
+
+
+AS $BODY$
+DECLARE
+   _where text;
+   _sql   text := 'SELECT * from icashobj.ictusrl';
+BEGIN
+   _where := concat_ws(' OR '
+       , CASE WHEN fromdate IS NOT NULL THEN 'logdte between $1 and $2' END
+       , CASE WHEN solefranch IS NOT NULL THEN 'usrsfc = $3' END
+       , CASE WHEN franchise IS NOT NULL THEN 'usrfrc = $4' END
+       , CASE WHEN subfranch IS NOT NULL THEN 'usrsbc = $5' END
+       , CASE WHEN userID IS NOT NULL THEN 'usridc = $6' END
+   ) ; 
+
+   IF _where <> '' THEN
+      _sql := _sql || ' WHERE ' || _where ;
+
+   RETURN QUERY
+   EXECUTE _sql
+   USING fromdate,todate,solefranch,franchise,subfranch,userID;   END IF;
+   RAISE NOTICE 'sql: %', _sql;
+END
+$BODY$;

@@ -1,0 +1,62 @@
+CREATE OR REPLACE FUNCTION icashobj.modifytransaction(
+	gcmcfname character varying,
+	gcmcmname character varying,
+	gcmclname character varying,
+	trmsd11 character varying,
+	trmsd21 character varying,
+	trmstl1 character varying,
+	trmmno1 character varying,
+	benfrfn1 character varying,
+	benfrmn1 character varying,
+	benfrln1 character varying,
+	benfrd11 character varying,
+	benfrd21 character varying,
+	benfnsl1 numeric,
+	benfrtl1 character varying,
+	benfrmo1 character varying,
+	benfdtl1 character varying,
+	benfmui1 character varying,
+	benfmdt1 date,
+	benfmtm1 time without time zone,
+	transnumber numeric,
+	benrlt1 character varying)
+    RETURNS text
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+DECLARE
+	transInfo icashobj.icttrml%ROWTYPE;
+	remname character varying;
+	bfname character varying;
+BEGIN
+	remname:=concat_ws(',',gcmcfname,gcmcmname,gcmclname);
+	bfname:=  concat_ws(',', benfrfn1,benfrmn1,benfrln1);
+	
+	SELECT ic.* INTO transInfo FROM icashobj.icttrml as ic, icashobj.ictbenfl as b WHERE ic.trmicd = b.benfbno AND trmicn = transNumber;
+	RAISE NOTICE '%',transInfo;
+	IF(transInfo.trmpst = 'N') THEN
+	
+		INSERT INTO icashobj.icttrmlOld (trmicn,trmsnm,trmsd1,trmsd2,trmstl,trmmno,benfrfn,benfrmn,benfrln,benfrd1,benfrd2,benfnsl,benfrtl,benfrmo,
+			benfdtl,benfmui,benfmdt,benfmtm,benrlt) VALUES (transNumber,transInfo.trmsnm,transInfo.trmsd1,transInfo.trmsd2,transInfo.trmstl,transInfo.trmmno,
+			benfrfn1,benfrmn1,benfrln1,benfrd11,benfrd21,benfnsl1,benfrtl1,benfrmo1,benfdtl1,benfmui1,benfmdt1,benfmtm1,benrlt1);
+		RAISE NOTICE 'Old inserted';
+		
+		UPDATE icashobj.icttrml SET trmpst = 'M',trmsnm = remname,trmsd1 = trmsd11,trmsd2 = trmsd21,trmstl = trmstl1,trmmno = trmmno1,trmrnm = bfname WHERE trmicn = transNumber;
+		RAISE NOTICE 'UPDATED';
+		
+		
+		UPDATE icashobj.ictbenfl SET benfrtp = 'M',benfrfn = benfrfn1,benfrmn = benfrmn1,benfrln = benfrln1,benfrd1 = benfrd11,benfrd2 = benfrd21,benfnsl = benfnsl1,
+		benfrtl = benfrtl1,benfrmo = benfrmo1,benfdtl = benfdtl1,benfmui = benfmui1,benfmdt = benfmdt1,benfmtm = benfmtm1 WHERE
+		benfbno = transInfo.trmicd;
+		RAISE NOTICE 'Benf log inserted';
+		
+		INSERT INTO icashobj.ictbenf (benfrfn,benfrmn,benfrln,benfrd1,benfrd2,benfnsl,benfrtl,benfrmo,benfdtl,benfmui,benfmdt,benfmtm,benfbno) VALUES 
+		(benfrfn1,benfrmn1,benfrln1,benfrd11,benfrd21,benfnsl1,benfrtl1,benfrmo1,benfdtl1,benfmui1,benfmdt1,benfmtm1,transInfo.trmicd);
+		RAISE NOTICE 'Benf inserted';
+		RETURN 'Modified';
+	ELSE RETURN 'Unable to update';
+	END IF;
+END;$BODY$;
+

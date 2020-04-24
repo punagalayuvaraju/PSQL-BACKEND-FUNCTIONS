@@ -1,0 +1,71 @@
+CREATE OR REPLACE FUNCTION icashobj.agentmassmodification(
+	sendingcountry character varying,
+	sendingcurrency character varying,
+	sendinggroupcode character varying,
+	receivingcountry character varying,
+	receivingcurrency character varying,
+	receivinggroupcode character varying,
+	deliverymode character varying,
+	productcode character varying,
+	commissioncurrency character varying,
+	grouptype character varying,
+	createduser character varying,
+	createddate date,
+	createdtime time without time zone,
+	authorizedstatus character,
+	commissionshare json[])
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+DECLARE i numeric:=0;
+DECLARE counts numeric;
+BEGIN
+-- -- -- -- -- -- -- MASS MODIFICATION
+  IF(authorizedstatus = ' ') THEN
+	DELETE FROM icashobj.iapcsf WHERE csfgrp=receivinggroupcode AND csfscn=sendingcountry AND csfscc=sendingcurrency AND csfpcd=productcode AND csfrcn=receivingcountry
+									 AND csfrcc=receivingcurrency AND csfmod=deliverymode AND csfcod=grouptype AND csfccr=commissioncurrency AND csfsgp=sendinggroupcode
+									 AND csfsda=0 AND csfsd1=0;
+	LOOP
+		EXIT WHEN i=array_length(commissionshare, 1);
+		i=i+1;
+ 		UPDATE icashobj.iapcst SET cstmas=(commissionshare[i]->>'mainagentshare')::numeric,cstfas=(commissionshare[i]->>'agentshare')::numeric,
+						cstsho=(commissionshare[i]->>'hoshare')::numeric,cstafl='',cstaid='',csttid=createduser,cstttm=createdtime,csttdt=createddate
+						
+						WHERE cstgrp=receivinggroupcode AND cstscn=sendingcountry AND cstscc=sendingcurrency AND cstpcd=productcode AND cstrcn=receivingcountry 
+						AND cstrcc=receivingcurrency AND cstmod=deliverymode AND cstcod=grouptype AND cstccr=commissioncurrency AND cstsgp=sendinggroupcode
+						AND cststs=commissionshare[i]->>'sharingstatus' AND cstfam=(commissionshare[i]->>'beforefromamt')::numeric 
+						AND csttam=(commissionshare[i]->>'beforetoamt')::numeric AND cstsda=0 AND cstsd1=0;
+	END LOOP;
+    RETURN 'Updated Successfully';
+-- -- -- -- -- -- -- -- AUTHORIZATION
+  ELSE
+    i=0;
+    UPDATE icashobj.iapcst SET cstafl=authorizedstatus,cstaid=createduser,cstadt=createddate,cstatm=createdtime WHERE cstgrp=receivinggroupcode AND cstscn=sendingcountry 
+						AND cstscc=sendingcurrency AND cstpcd=productcode AND cstrcn=receivingcountry AND cstrcc=receivingcurrency AND cstmod=deliverymode 
+						AND cstcod=grouptype AND cstccr=commissioncurrency AND cstsgp=sendinggroupcode AND cstsda=0 AND cstsd1=0;
+	LOOP
+		EXIT WHEN i=array_length(commissionshare, 1); 
+		i=i+1;
+		IF NOT EXISTS(SELECT * FROM icashobj.iapcsf WHERE csfgrp=receivinggroupcode AND csfscn=sendingcountry 
+					  AND csfscc=sendingcurrency AND csfpcd=productcode AND csfrcn=receivingcountry AND csfrcc=receivingcurrency AND csfmod=deliverymode 
+					  AND csfcod=grouptype AND csfccr=commissioncurrency AND csfsgp=sendinggroupcode AND csffam=(commissionshare[i]->>'fromamount')::numeric
+					  AND csftam=(commissionshare[i]->>'toamount')::numeric AND csfsts=commissionshare[i]->>'sharingstatus' AND csfsda=0 AND csfsd1=0) THEN
+ 			INSERT INTO icashobj.iapcsf (csfscn,csfscc,csfrcn,csfrcc,csfpcd,csfcod,csfsgp,
+									csfgrp,csfmod,csfccr,csfsts,csffam,
+									csftam,csfmas,csffas,
+									csfsda,csfsd1,csfsho,
+									csfaid,csfadt,csfatm)
+ 			VALUES (sendingcountry,	sendingcurrency, receivingcountry,receivingcurrency,productcode,grouptype,sendinggroupcode,
+					receivinggroupcode,deliverymode,commissioncurrency,commissionshare[i]->>'sharingstatus',(commissionshare[i]->>'fromamount')::numeric,
+					(commissionshare[i]->>'toamount')::numeric,(commissionshare[i]->>'mainagentshare')::numeric,(commissionshare[i]->>'agentshare')::numeric,
+					(commissionshare[i]->>'mainagentpercentage')::numeric,(commissionshare[i]->>'agentpercentage')::numeric,(commissionshare[i]->>'hoshare')::numeric,
+				    createduser,createddate,createdtime);
+		END IF;
+	END LOOP;  
+	RETURN 'Authorization Succes';
+  END IF;
+END
+$BODY$;

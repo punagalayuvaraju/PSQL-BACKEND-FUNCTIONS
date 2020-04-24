@@ -1,0 +1,28 @@
+CREATE OR REPLACE FUNCTION icashobj.bulkthirdpartyupload(
+	bnkbkn text DEFAULT ''::text,
+	bnkbrn text DEFAULT ''::text,
+	bnkadr text DEFAULT ''::text,
+	bnklcd text DEFAULT ''::text,
+	bnkmod numeric DEFAULT 0,
+	bnkcty numeric DEFAULT 0,
+	bnkstt text DEFAULT ''::text,
+	bnkact text DEFAULT ''::text,
+	bnkacd text DEFAULT ''::text,
+	bnkcui text DEFAULT ''::text,
+	bnkcdt date DEFAULT (
+	'now'::text)::date,
+	bnkctm time without time zone DEFAULT (
+	'now'::text)::time without time zone,
+	bnkcod text DEFAULT ''::text)
+    RETURNS SETOF icashobj.ictbnk 
+    LANGUAGE 'plpgsql'
+
+   
+AS $BODY$
+    BEGIN
+	RETURN QUERY
+	INSERT INTO icashobj.ictbnk (bnkbkn,bnkbrn,bnkadr,bnklcd,bnkmod,bnkcty,bnkstt,bnkact,bnkacd,bnkcui,bnkcdt,bnkctm,bnkcod)
+	VALUES (bnkbkn,bnkbrn,bnkadr, bnklcd, bnkmod,bnkcty,bnkstt,bnkact,bnkacd,bnkcui,bnkcdt,bnkctm,bnkcod) returning *;
+	
+	END
+   $BODY$;

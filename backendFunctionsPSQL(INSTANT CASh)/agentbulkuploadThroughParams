@@ -1,0 +1,54 @@
+CREATE OR REPLACE FUNCTION icashobj.agentcommissionshareauthorization(
+	sendingcountry character varying,
+	sendingcurrency character varying,
+	receivingcountry character varying,
+	receivingcurrency character varying,
+	productcode character varying,
+	grouptype character varying,
+	sendinggroupcode character varying,
+	receivinggroupcode character varying,
+	deliverymode character varying,
+	commissioncurrency character varying,
+	sharingstatus character varying,
+	fromamount numeric,
+	toamount numeric,
+	agentsharepercentage numeric,
+	mainagentsharepercentage numeric,
+	agentsharefixed numeric,
+	mainagentsharefixed numeric,
+	headofficeshare numeric,
+	authorizedstatus character varying,
+	authorizeddate date,
+	authorizedtime time without time zone,
+	authorizeduser character varying)
+    RETURNS character varying
+    LANGUAGE 'plpgsql'
+
+    COST 100
+    VOLATILE 
+AS $BODY$
+DECLARE counts numeric;
+		counter numeric := 0;
+		details json;
+		
+BEGIN
+	IF(authorizedstatus = 'A') THEN				
+			IF NOT EXISTS(SELECT * FROM icashobj.iapcsf where csfscn=sendingcountry AND csfscc=sendingcurrency AND csfrcn=receivingcountry 
+				AND csfcod=grouptype AND csfrcc=receivingcurrency AND csfpcd=productcode AND csfsgp=sendinggroupcode AND csfgrp=receivinggroupcode 
+				AND csfmod=deliverymode AND csffam= fromamount AND csftam= toamount AND csfsts= sharingstatus) THEN
+ 						INSERT INTO icashobj.iapcsf (csfscn,csfscc,csfrcn,csfrcc,csfpcd,csfcod,csfsgp,
+													 csfgrp,csfmod,csfccr,csfsts,csffam,csftam,csfsd1,csfsda,
+ 													 csfmas,csffas,csfsho,csfaid,csfadt,csfatm)
+ 								VALUES (sendingcountry,	sendingcurrency, receivingcountry,receivingcurrency,productcode,grouptype,sendinggroupcode,
+										receivinggroupcode,deliverymode,commissioncurrency,sharingstatus,fromamount,toamount,agentsharepercentage,mainagentsharepercentage,
+										agentsharefixed,mainagentsharefixed,headofficeshare,authorizeduser,authorizeddate,authorizedtime);
+			  END IF;
+	END IF;	
+	UPDATE icashobj.iapcst SET cstaid=authorizeduser, cstadt=authorizeddate ,cstatm=authorizedtime, cstafl=authorizedstatus where cstscn=sendingcountry 
+						AND cstscc=sendingcurrency AND cstrcn=receivingcountry AND cstcod=grouptype AND cstrcc=receivingcurrency 
+						AND cstpcd=productcode AND cstsgp=sendinggroupcode AND cstgrp=receivinggroupcode AND cstmod=deliverymode AND cstafl=' '
+						AND cststs=sharingstatus AND cstfam=fromamount AND csttam=toamount AND cstfas=agentsharefixed AND cstmas=mainagentsharefixed;
+	RETURN 'SUCCESS';
+END
+$BODY$;
+

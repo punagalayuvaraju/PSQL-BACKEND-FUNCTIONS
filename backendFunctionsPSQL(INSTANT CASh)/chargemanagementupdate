@@ -1,0 +1,68 @@
+CREATE OR REPLACE FUNCTION icashobj.chargemanagementupdate(
+	tiercode character varying,
+	sendingcountry character varying,
+	slabcurrency character varying,
+	receivingcountry character varying,
+	deliverymode numeric,
+	fromamount numeric,
+	toamount numeric,
+	charges numeric,
+	createduser character varying,
+	createdon date,
+	createdat time without time zone,
+	beforefromamount numeric,
+	beforetoamount numeric,
+	beforecharges numeric)
+    RETURNS character
+    LANGUAGE 'plpgsql'
+
+AS $BODY$
+DECLARE  _range json; 
+		counter numeric := 0 ; 
+		counts numeric := 0; 
+		fromamt numeric; 
+		toamt numeric; 
+		chargeamt numeric;
+		_scope boolean=false;		
+BEGIN
+    IF(fromamount < toamount) THEN
+		SELECT COUNT(*) INTO counts FROM icashobj.ictchg WHERE (CASE WHEN (sendingcountry = '') THEN chgrcy=receivingcountry ELSE chgscy=sendingcountry END)
+	                                                     AND chgtir=tiercode  AND chgmod=deliverymode AND chgtam!=beforetoamount AND 
+														 chgfam!=beforefromamount AND chgcrg!=beforecharges;
+		LOOP  
+	   		EXIT WHEN counter = counts;
+	     	SELECT chgtam,chgfam,chgcrg INTO toamt,fromamt,chargeamt FROM icashobj.ictchg 
+		                                WHERE (CASE WHEN (sendingcountry = '') THEN chgrcy=receivingcountry ELSE chgscy=sendingcountry END)
+	                                    AND chgtir=tiercode  AND chgmod=deliverymode AND chgtam!=beforetoamount AND  chgfam!=beforefromamount
+									    AND chgcrg!=beforecharges LIMIT 1 OFFSET counter;
+										
+ 		 	IF(charges<chargeamt) THEN 
+				CASE WHEN (fromamount BETWEEN fromamt AND toamt) AND (beforefromamount != fromamount AND beforetoamount != toamt) THEN
+        			RAISE EXCEPTION 'From amount is not within range';
+				ELSE 
+					CASE WHEN (toamount BETWEEN fromamt AND toamt) AND (beforefromamount != fromamt AND beforetoamount != toamount) THEN
+						RAISE EXCEPTION 'To amout is not within range';
+					ELSE
+					     _scope = true;
+					END CASE;
+				END CASE;
+			ELSE 
+				RAISE EXCEPTION 'Charge Amount should be less than last Slab charges'; 
+			END IF;
+			counter= counter+1;
+		END LOOP;	
+		IF(_scope) THEN 
+		      UPDATE icashobj.ictchg SET chgfam=fromamount,chgtam=toamount,chgcrg=charges,chgflg='',chgaid='',chgdat= createdon,chgtim=createdat,chguid=createduser
+					 		WHERE chgtir=tiercode  AND chgmod=deliverymode AND chgfam =beforefromamount AND chgtam = beforetoamount 
+						    AND chgcrg = beforecharges AND (CASE WHEN (sendingcountry = '') THEN chgrcy=receivingcountry ELSE chgscy=sendingcountry END);
+							
+			  DELETE FROM icashobj.ictctr WHERE chrtir=tiercode  AND chrmod=deliverymode AND chrfam =beforefromamount AND chrtam = beforetoamount 
+						    AND chrcrg = beforecharges AND (CASE WHEN (sendingcountry = '') THEN chrrcy=receivingcountry ELSE chrscy=sendingcountry END);
+			  RETURN 'Updated Successfully';
+		END IF;		
+	ELSE
+		RAISE EXCEPTION 'From Amount shouldnt be greater than To Amount';
+	END IF;
+END 
+$BODY$;
+
